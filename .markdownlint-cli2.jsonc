@@ -1,0 +1,9 @@
+{
+  "config": {
+    "extends": ".markdownlint.json"
+  },
+  "ignores": [
+    "node_modules",
+    "SECURITY.md"
+  ]
+}

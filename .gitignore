@@ -1,0 +1,18 @@
+node_modules/
+npm-debug.log*
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Disposable multi-root workspace files generated per-worktree by
+# tools/New-IssueWorktree.ps1 — regenerated on every run, not shared
+wara-*.code-workspace
+
+# WARA runtime output — analyzer/report/collector scripts default to writing
+# timestamped artifacts into the current working directory (Get-Location/$PWD)
+WARA-File-*.json
+Expert-Analysis-v1-*.xlsx
+Assessment-Findings-Report-v1-*.xlsx
+Executive Summary Presentation - *.pptx
+Impacted Resources and Recommendations Template *.csv

@@ -1,0 +1,31 @@
+{
+  "urgency": {
+    "urgency:now": 30,
+    "urgency:soon": 24,
+    "urgency:medium": 16,
+    "urgency:low": 8,
+    "default": 10
+  },
+  "importance": {
+    "importance:high": 24,
+    "importance:medium": 16,
+    "importance:low": 8,
+    "default": 10
+  },
+  "stage": {
+    "status:planning": 18,
+    "status:implement": 16,
+    "status:plan": 14,
+    "status:investigating": 12,
+    "status:investigate": 10,
+    "status:implementing": 6,
+    "status:release": 2,
+    "default": 8
+  },
+  "dependencyPenalty": 8,
+  "dependencyBonus": 8,
+  "wipPenaltyImplementing": 8,
+  "wipBonusInvestigate": 4,
+  "dependencyPenaltyPattern": "blocked on|depends on|prerequisite",
+  "dependencyBonusPattern": "unblock|foundational|prerequisite for"
+}
