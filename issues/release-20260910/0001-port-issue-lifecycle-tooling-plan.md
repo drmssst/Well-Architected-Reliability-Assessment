@@ -123,20 +123,21 @@ themselves.
 
 ### Acceptance criteria
 
-- [ ] D1. The four commits (config → tools → prompts → infra) exist on
+- [x] D1. The four commits (config → tools → prompts → infra) exist on
       `release/20260910`, each containing exactly the files listed in its Phase B
       group, with no other pending changes left uncommitted in the worktree.
-- [ ] D2. `CHANGELOG.md` exists at the repo root with an `[Unreleased]` section
+- [x] D2. `CHANGELOG.md` exists at the repo root with an `[Unreleased]` section
       containing one `patch`-classified entry for this port.
-- [ ] D3. `README.md` contains a `## Issue lifecycle workflow` section covering the
+- [x] D3. `README.md` contains a `## Issue lifecycle workflow` section covering the
       five stages and their `status:*` labels, the worktree-per-stage model, and a
       pointer to `.github/prompts/*.prompt.md`.
-- [ ] D4. `tools/Invoke-MarkdownLint.ps1` and `tools/Invoke-PsScriptAnalyzer.ps1`
+- [x] D4. `tools/Invoke-MarkdownLint.ps1` and `tools/Invoke-PsScriptAnalyzer.ps1`
       both exit `0` against every file in the Phase B Affected Documents and
       Affected Source Files tables.
-- [ ] D5. `npm audit` reports 0 vulnerabilities against the committed
+- [x] D5. `npm audit` reports 0 vulnerabilities against the committed
       `package.json`/`package-lock.json`.
-- [ ] D6. Sizing estimate
+
+### Sizing estimate
 
 **Estimate:** S
 
@@ -161,11 +162,11 @@ re-sequencing due to file interdependencies not identified in Phase B.*
 
 ### Definition of done
 
-- [ ] All acceptance criteria verified
-- [ ] All affected documents updated
-- [ ] All tests in Testing Requirements written and passing
-- [ ] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
-- [ ] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
-- [ ] CHANGELOG entry added with correct classification
-- [ ] All modified Markdown files pass lint
+- [x] All acceptance criteria verified
+- [x] All affected documents updated
+- [x] All tests in Testing Requirements written and passing
+- [x] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
+- [x] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
+- [x] CHANGELOG entry added with correct classification
+- [x] All modified Markdown files pass lint
 - [ ] PR opened targeting the release branch
