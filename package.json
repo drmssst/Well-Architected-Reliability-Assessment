@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "markdownlint-cli2": "0.23.2"
+  },
+  "scripts": {
+    "lint:md": "markdownlint-cli2 **/*.md"
+  },
+  "overrides": {
+    "smol-toml": "1.8.0"
+  }
+}

@@ -1,10 +1,10 @@
+# Well-Architected-Reliability-Assessment
+
 [![RunPesterTests](https://github.com/Azure/Well-Architected-Reliability-Assessment/actions/workflows/pestertests.yml/badge.svg)](https://github.com/Azure/Well-Architected-Reliability-Assessment/actions/workflows/pestertests.yml)
 [![PSScriptAnalyzer](https://github.com/Azure/Well-Architected-Reliability-Assessment/actions/workflows/powershell.yml/badge.svg)](https://github.com/Azure/Well-Architected-Reliability-Assessment/actions/workflows/powershell.yml)
 
 > [!NOTE]
-> This repository is for the development of the WARA tooling. The up to date documentation for the module commands can be found [here](https://azure.github.io/Azure-Proactive-Resiliency-Library-v2/tools/).
-
-# Well-Architected-Reliability-Assessment
+> This repository is for the development of the WARA tooling. See the [WARA module command documentation](https://azure.github.io/Azure-Proactive-Resiliency-Library-v2/tools/) for the latest information.
 
 The Well-Architected Reliability Assessment is aimed to assess an Azure workload implementation across the reliability pillar of the Microsoft Azure Well-Architected Framework. A workload is a resource or collection of resources that provide end-to-end functionality to one or multiple clients (humans or systems). An application can have multiple workloads, with multiple APIs and databases working together to deliver specific functionality.
 
@@ -25,6 +25,7 @@ This repository holds scripts and automation built for the Well-Architected Reli
 - [Project Structure](#project-structure)
 - [Contribution Guide](docs/wara/contribution-guide.md)
 - [Modules](#modules)
+- [Issue Lifecycle Workflow](#issue-lifecycle-workflow)
 
 ## Getting Started
 
@@ -77,7 +78,7 @@ Start-WARAReport -ExpertAnalysisFile 'C:\WARA\Expert-Analysis-v1-2025-02-04-11-1
 ## Requirements
 
 > [!IMPORTANT]
-> These are the requirements for the collector. Requirements for all commands can be found [here](https://azure.github.io/Azure-Proactive-Resiliency-Library-v2/tools/) in the tools section of the Azure Proactive Resiliency Library.
+> These are the requirements for the collector. See the [Azure Proactive Resiliency Library tools documentation](https://azure.github.io/Azure-Proactive-Resiliency-Library-v2/tools/) for requirements for all commands.
 
 - [PowerShell 7.4](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
 - Azure PowerShell Module
@@ -125,7 +126,7 @@ Start-WARAReport -ExpertAnalysisFile 'C:\WARA\Expert-Analysis-v1-2025-02-04-11-1
 
 These instructions are the same for any platform that supports PowerShell. The following instructions have been tested on Azure Cloud Shell, Windows, and Linux.
 
-You can review all of the parameters on the Start-WARACollector [here](docs/wara/Start-WARACollector.md).
+You can review all of the [Start-WARACollector parameters](docs/wara/Start-WARACollector.md).
 
 > [!NOTE]
 > Whatever directory you run the `Start-WARACollector` cmdlet in, the Excel file will be created in that directory. For example: if you run the `Start-WARACollector` cmdlet in the `C:\Temp` directory, the Excel file will be created in the `C:\Temp` directory.
@@ -137,14 +138,14 @@ You can review all of the parameters on the Start-WARACollector [here](docs/wara
 Install-Module WARA
 ```
 
-2. Import the WARA module.
+1. Import the WARA module.
 
 ```powershell
 # Import the WARA module.
 Import-Module WARA
 ```
 
-3. Start the WARA collector. (Replace these values with your own)
+1. Start the WARA collector. (Replace these values with your own)
 
 ```powershell
 # Start the WARA collector.
@@ -202,7 +203,7 @@ The `Start-WARAAnalyzer` cmdlet is used to analyze the collected data and genera
 > [!NOTE]
 > Whatever directory you run the `Start-WARAAnalyzer` cmdlet in, the Excel file will be created in that directory. For example: if you run the `Start-WARAAnalyzer` cmdlet in the `C:\Temp` directory, the Excel file will be created in the `C:\Temp` directory.
 
-You can review all of the parameters of Start-WARAAnalyzer [here](docs/wara/Start-WARAAnalyzer.md).
+You can review all of the [Start-WARAAnalyzer parameters](docs/wara/Start-WARAAnalyzer.md).
 
 #### Examples
 
@@ -219,9 +220,11 @@ The `Start-WARAReport` cmdlet is used to generate the WARA reports.
 > [!NOTE]
 > Whatever directory you run the `Start-WARAReport` cmdlet in, the Excel and PowerPoint files will be created in that directory. For example: if you run the `Start-WARAReport` cmdlet in the `C:\Temp` directory, the Excel and PowerPoint files will be created in the `C:\Temp` directory.
 
-You can review all of the parameters of Start-WARAReport [here](docs/wara/Start-WARAReport.md).
+You can review all of the [Start-WARAReport parameters](docs/wara/Start-WARAReport.md).
+
 > [!WARNING]
 > Make sure to close all instances of **Microsoft Excel** and **Microsoft PowerPoint** prior to running `Start-WARAReport`
+
 #### Examples
 
 ##### Create the Excel and PowerPoint reports from the Action Plan Excel output
@@ -245,3 +248,26 @@ This repository is meant to be used for the development of the Well-Architected 
 - [🏥servicehealth](docs/servicehealth/servicehealth.md)
 - [🩹support](docs/support/support.md)
 - [🔧utils](docs/utils/utils.md)
+
+## Issue Lifecycle Workflow
+
+This repository uses a Copilot Chat-driven issue lifecycle: `raise → investigate → plan →
+implement → release`. Each stage has its own git worktree and its own `status:*` GitHub
+issue label that gates the transition to the next stage.
+
+| Stage | Idle label (ready for stage) | Active label (in progress) | Worktree |
+| --- | --- | --- | --- |
+| Raise | — | — | any worktree; opens the issue via `raise-issue` |
+| Investigate | `status:investigate` | `status:investigating` | `C:\wt\wara\investigate\issue-<N>` |
+| Plan | `status:plan` | `status:planning` | `C:\wt\wara\plan\issue-<N>` |
+| Implement | `status:implement` | `status:implementing` | `C:\wt\wara\implement\issue-<N>` |
+| Release | `awaiting-approval` | — | `C:\wt\wara\release` |
+
+Investigation and plan documents live on the `docs/main` branch, checked out at
+`C:\wt\wara\docs`.
+
+Each stage transition, and the prompts that drive it, are documented in
+`.github/prompts/*.prompt.md` — that directory is the source of truth for the exact
+steps, gates, and commands used at each stage (`raise-issue`, `groom-backlog`,
+`next-issues`, `investigate-issue`, `plan-issue`, `implement-issue`, and the
+`approve-ready-for-*` transition prompts).
