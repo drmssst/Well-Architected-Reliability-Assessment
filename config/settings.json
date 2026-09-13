@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "wara"
+  },
+  "devTools": {
+    "psScriptAnalyzerVersion": "1.25.0"
+  },
+  "github": {
+    "project": {
+      "number": 1,
+      "owner": "drmssst",
+      "id": "PVT_kwHOAIS7wc4BjUA_",
+      "statusFieldId": "PVTSSF_lAHOAIS7wc4BjUA_zhiI0UQ",
+      "statusOptions": {
+        "investigate":   "6904fd57",
+        "investigating": "80832cae",
+        "plan":          "bc3b2228",
+        "planning":      "f9c6fe10",
+        "implement":     "3ee36513",
+        "implementing":  "11745525",
+        "release":       "2ab157d6",
+        "shipped":       "2bde22de",
+        "done":          "58636a34"
+      },
+      "sizeFieldId": "PVTSSF_lAHOAIS7wc4BjUA_zhiI0gA",
+      "sizeOptions": {
+        "XS": "dd6de203",
+        "S":  "e3489527",
+        "M":  "b45a9d76",
+        "L":  "6a5ef9ec",
+        "XL": "118a54b2"
+      },
+      "estimateFieldId": "PVTF_lAHOAIS7wc4BjUA_zhiI0gE"
+    }
+  }
+}
