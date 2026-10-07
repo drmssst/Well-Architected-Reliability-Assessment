@@ -1,25 +1,9 @@
 ---
-agent: agent
-description: >
-  Ranks and returns the next best GitHub issues to work on using weighted
-  urgency, importance, stage readiness, dependency cues, and WIP fit.
+name: next-issues
+description: Ranks and returns the next best GitHub issues to work on using weighted urgency, importance, stage readiness, dependency cues, and WIP fit.
+disable-model-invocation: true
 argument-hint: "Optional top count and output format, e.g. /next-issues 5 markdown"
-tools:
-  - agent
-  - browser
-  - edit
-  - execute
-  - read
-  - search
-  - todo
-  - vscode
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-  - github.vscode-pull-request-github/github-pull-request_create_pull_request
-  - github.vscode-pull-request-github/github-pull-request_currentActivePullRequest
-  - github.vscode-pull-request-github/github-pull-request_pullRequestStatusChecks
-
 ---
-
 # Next Issues
 
 Run the ranking script and summarize the top candidates.

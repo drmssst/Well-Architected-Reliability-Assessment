@@ -1,28 +1,9 @@
 ---
-agent: agent
-description: >
-  Writes a committed, approved implementation plan for a status:plan issue. Creates
-  a plan doc on the docs/main branch with phases A–E (scope, document impact, testing,
-  acceptance criteria, definition of done). No PR is opened — plan docs go directly
-  to docs/main. Approve-ready-for-implement advances the issue to status:implement.
+name: plan-issue
+description: Writes a committed, approved implementation plan for a status:plan issue. Creates a plan doc on the docs/main branch with phases A–E (scope, document impact, testing, acceptance criteria, definition of done). No PR is opened — plan docs go directly to docs/main. Approve-ready-for-implement advances the issue to status:implement.
+disable-model-invocation: true
 argument-hint: "Issue number — e.g. 54"
-
-<!-- COMPLEXITY NOTE: This prompt spans 6 steps and 5 phases. Each phase must be written
-     and user-accepted one at a time before advancing. The ⛔ STOP markers are mandatory
-     gates — do not skip, merge, or pre-empt them. -->
-tools:
-  - agent
-  - browser
-  - edit
-  - execute
-  - read
-  - search
-  - todo
-  - vscode
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-
 ---
-
 # Issue Planning Workflow
 
 **Issue number:** extract from the argument (e.g. `/plan-issue 54`). If no number was

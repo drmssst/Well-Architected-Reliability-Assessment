@@ -1,24 +1,9 @@
 ---
-agent: agent
-description: >
-  Investigates a GitHub issue: surveys the codebase, writes four staged investigation
-  phases (Findings, Approach, Risks, Summary) to a new investigation doc on the docs/main
-  branch, then stamps awaiting-approval. No PR is opened — investigation docs go
-  directly to docs/main. Approve-ready-for-plan advances the issue to status:plan.
+name: investigate-issue
+description: Investigates a GitHub issue: surveys the codebase, writes four staged investigation phases (Findings, Approach, Risks, Summary) to a new investigation doc on the docs/main branch, then stamps awaiting-approval. No PR is opened — investigation docs go directly to docs/main. Approve-ready-for-plan advances the issue to status:plan.
+disable-model-invocation: true
 argument-hint: "Issue number — e.g. 117"
-tools:
-  - agent
-  - browser
-  - edit
-  - execute
-  - read
-  - search
-  - todo
-  - vscode
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-
 ---
-
 # Issue Investigation Workflow
 
 **Issue number:** extract from the argument (e.g. `/investigate-issue 117`). If no
