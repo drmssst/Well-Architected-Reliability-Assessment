@@ -470,3 +470,228 @@ objective-evidence standard B1 establishes for eligibility.
 
 **Alternatives considered:** none — this question has one well-evidenced answer once
 A6's finding is treated as the target defect.
+
+## Phase C — Risks and prerequisites
+
+### C1. The skills migration must reach the release branch before implementation
+
+**Risk:** B2 and B8 target new and modified files under `.github/skills/<name>/
+SKILL.md` — the convention discovered mid-investigation to have replaced
+`.github/prompts/<name>.prompt.md` (A1). That migration commit currently lives only
+on this issue's own `investigate/issue-4-fast-track-lifecycle` branch, which is not
+merged anywhere else.
+
+**Mechanism:** `tools/New-IssueWorktree.ps1 -Stage implement` creates the
+implementation worktree from the release branch, not from this investigation branch.
+If `release/20260910` does not yet contain the skills migration when implementation
+starts, that worktree would still see the retired `.github/prompts/*.prompt.md`
+files, and B2/B8's target paths would not exist — breaking the plan before it starts.
+
+**Mitigation:** confirm the skills migration has been merged to `release/20260910`
+before implementation begins. If not yet merged, land it first via its own small,
+independently mergeable PR (it is unrelated to this issue's eligibility criteria), or
+explicitly carry the migration commit into this issue's own implementation branch.
+Planning should re-verify `.github/skills/` exists on whichever branch the implement
+worktree is created from, rather than assuming it.
+
+### C2. The `lifecycle:fast-track` label does not exist in the repository yet
+
+**Risk:** B3 introduces a new repository label, `lifecycle:fast-track`, but A5 and A7
+found that every existing lifecycle skill only adds or removes labels that already
+exist on the repository (`gh issue edit --add-label`) — none of the nine skills
+create new labels.
+
+**Mechanism:** `gh issue edit --add-label` fails if the named label has not already
+been created on the repository (`gh label create`). The first fast-track issue raised
+or converted would fail at that step if the label was never created ahead of time.
+
+**Mitigation:** implementation must include a one-time `gh label create
+"lifecycle:fast-track" --color <c> --description <d>` step (or manual confirmation
+that it already exists) before either B2 skill applies the label for the first time.
+
+### C3. The B4 micro-plan comment has no fixed template yet
+
+**Risk:** B4 names five mandatory fields for the micro-plan comment (Scope, Affected
+files, Risk/reversibility, Test plan, Version impact) but does not define a concrete
+Markdown structure for them, and A4 already found "no prompt, schema, or parser
+defines a reduced plan form" anywhere in the repository today.
+
+**Mechanism:** without a fixed template, two downstream consumers have nothing
+concrete to check against: the B9 automated cross-check needs to reliably extract the
+"Affected files" list from free-form prose, and the B5 human reviewer has no
+checklist to confirm all five fields are actually present before approving. Either
+could silently pass an incomplete micro-plan.
+
+**Mitigation:** planning must define a fixed Markdown template for the B4 comment
+(named headers per field, e.g. `### Affected files`), handed to both the B2 skills
+(to produce it) and the B9 cross-check (to parse it).
+
+### C4. Escalation may leave a stale `lifecycle:fast-track` label behind
+
+**Risk:** B6 moves an escalated issue to `status:investigate`; B7 preserves all
+fast-track evidence "permanently on the issue." Neither explicitly addresses whether
+the `lifecycle:fast-track` label itself is removed on escalation.
+
+**Mechanism:** B3's additive priority bonus in `config/issue-priority-weights.json`
+is keyed on the label being present, not on which lifecycle stage the issue occupies.
+If the label survives escalation, `Get-NextIssues.ps1` would keep applying the
+fast-track bonus to an issue that has already proven itself not eligible — over-
+ranking it against genuine `status:investigate` work for no justified reason.
+
+**Mitigation:** add an explicit step to B6's escape-hatch procedure: remove
+`lifecycle:fast-track` in the same transition that adds `status:investigate` on
+escalation. The B4/B7 evidence (comments) stays; only the routing label is dropped.
+
+### C5. No automated test coverage for the new fast-track skills (considered and accepted)
+
+**Risk:** B9 adds no Pester suite for the two new B2 skills or the modified B8
+conditional branch.
+
+**Mechanism:** A6 already found zero existing test coverage for any of the nine
+current lifecycle skills or their three helper scripts — this issue does not change
+that baseline, it extends it to two more files.
+
+**Mitigation:** none beyond what B9 already states — this is a deliberate,
+proportionate choice consistent with existing practice, not a new gap introduced by
+this issue. The B10 manual validation papercut is the acceptance check for the one
+concrete defect currently known.
+
+### C6. B2's "shared checklist step" has no existing cross-skill include mechanism
+
+**Risk:** B2's rationale states both new skills "share one checklist step rather than
+duplicating the eligibility logic," but Phase A found no include, import, or
+transclusion mechanism between any of the nine existing skill files — each is a
+standalone, self-contained document.
+
+**Mechanism:** without such a mechanism, "sharing" a step in practice means
+duplicating the same checklist text in both `raise-fast-track-issue/SKILL.md` and
+`convert-to-fast-track/SKILL.md`, which is a documentation-consistency risk (the two
+copies could drift out of sync on a future edit) rather than a functional one.
+
+**Mitigation:** accept duplication as the only option consistent with the existing
+convention (no new include mechanism is in scope for this issue); planning should
+note the duplication explicitly so a future edit to the B1 checklist knows to update
+both files.
+
+### C7. The GH Project status field remains externally managed (residual, inherited from issue #1)
+
+**Risk:** issue #1's investigation already found the live GH Project status field is
+managed outside repository version control.
+
+**Mechanism:** B3 deliberately avoids adding new status options for exactly this
+reason, reusing the existing `plan` and `implementing` options instead. The
+underlying external-management exposure is therefore unchanged, not introduced by
+this issue.
+
+**Mitigation:** none beyond what already exists for the rest of the lifecycle — this
+issue carries no incremental risk here; B3's design choice is itself the mitigation.
+
+### C8. Fast-track issues double-counting the `status:investigate` WIP bonus (false alarm)
+
+**Risk considered:** A5 found `Get-NextIssues.ps1` "applies a WIP bonus specifically
+to `status:investigate`"; B3 adds a second, additive `lifecycle:fast-track` bonus —
+could the two stack unexpectedly while a fast-track issue is in flight?
+
+**Mechanism checked:** B3 places fast-track issues at the existing `plan` status
+option, skipping `status:investigate`/`investigating` entirely. The WIP bonus is keyed
+specifically to `status:investigate`, which a fast-track issue never occupies.
+
+**Conclusion:** false alarm — the two bonuses cannot stack because their trigger
+conditions (`status:investigate` vs. `status:plan`/`lifecycle:fast-track`) are
+mutually exclusive by construction. No mitigation needed.
+
+## Phase D — Ready-to-plan summary
+
+### D1. Files in scope
+
+| File | Change | Driven by |
+| --- | --- | --- |
+| `.github/skills/raise-fast-track-issue/SKILL.md` | New file — raise-time fast-track entry point | B2 |
+| `.github/skills/convert-to-fast-track/SKILL.md` | New file — grooming-time conversion entry point | B2 |
+| `.github/skills/implement-issue/SKILL.md` | Modified — add Step 1 conditional branch for `lifecycle:fast-track` | B8 |
+| `config/issue-priority-weights.json` | Modified — add `lifecycle:fast-track` additive bonus entry | B3 |
+| `tools/Get-NextIssues.ps1` | Conditional — only if scoring logic needs a new branch to apply the bonus (TBD, see D2) | C4, D2 |
+| `README.md` | Modified — document the fast-track route alongside the existing lifecycle table | A1, A7 |
+| `CHANGELOG.md` | Modified — standard release entry | Definition of Done |
+
+### D2. Decisions deferred to planning
+
+1. **Exact numeric bonus for `lifecycle:fast-track`** in
+   `config/issue-priority-weights.json` (B3 deferred this explicitly). Options:
+   (a) match the magnitude of the existing `status:investigate` WIP bonus; (b) a
+   smaller fractional bonus, reasoning that fast-track issues already skip two
+   stages and need less additional push.
+
+2. **Whether `tools/Get-NextIssues.ps1` requires code changes** to apply the new
+   bonus, or whether its scoring logic already reads
+   `config/issue-priority-weights.json` generically per label. Options:
+   (a) confirm it is already data-driven — no code change needed, drop the
+   conditional row from D1; (b) it requires a new scoring branch — keep it in
+   scope and size accordingly.
+
+3. **Color and description for the new `lifecycle:fast-track` label**
+   (`gh label create`, per C2). Options: (a) match the existing
+   `urgency:*`/`importance:*` severity-style palette; (b) a distinct neutral
+   color, since B3 frames this label as an orthogonal marker, not a severity
+   signal — recommended, to avoid implying false urgency.
+
+4. **Exact Markdown template for the B4 micro-plan comment** (no existing
+   precedent, per C3). Planning must draft the literal headers/structure (e.g.,
+   `### Scope`, `### Affected files`, ...) so both B2 skills (produce it) and the
+   B9 cross-check (parse it) share one concrete format.
+
+### D3. Recommended commit strategy
+
+Four commits, in this order:
+
+1. `feat(#4): add raise-fast-track-issue and convert-to-fast-track skills` — the
+   two new B2 entry points together; they share the B1 checklist and are
+   naturally reviewed as a pair.
+2. `feat(#4): branch implement-issue on lifecycle:fast-track` — the isolated B8
+   conditional change.
+3. `feat(#4): add lifecycle:fast-track label and priority bonus` — the
+   `gh label create` action plus the `config/issue-priority-weights.json` entry
+   (and `tools/Get-NextIssues.ps1` changes, if D2 item 2 determines they are
+   needed), grouped as one prioritization concern.
+4. `docs(#4): document fast-track route and changelog entry` — `README.md` and
+   `CHANGELOG.md`, last, matching the standard pattern A2 describes.
+
+### D4. Test requirements
+
+No new Pester suite is added, per B9's decision. The repository's single existing
+test file (A6) does not cover any of the files in D1's table, so there is no
+existing regression surface at risk either way. The full Pester suite should still
+run once before the release PR, per the standard Definition of Done, but no new
+test-writing is expected specifically for this issue. The B10 manual validation
+papercut (a separate, later issue) is the acceptance check for the fast-track
+route's real-world behavior.
+
+### Sizing estimate
+
+**Estimate:** M
+
+| Driver | Weight | Reasoning |
+| --- | --- | --- |
+| New skill files (B2) | Medium | Two new files, closely patterned on the nine existing skills (A1) — low novelty, bounded effort |
+| Modified implement-issue skill (B8) | Low | Single conditional branch in Step 1; rest of skill unchanged |
+| Label and priority config (B3, C2) | Low | One `gh label create` plus one JSON entry; mechanical |
+| Priority scoring integration (D2 item 2) | Medium | Unresolved whether `Get-NextIssues.ps1` needs new scoring logic or just a config entry |
+| Micro-plan template design (C3) | Medium | No existing precedent in the repo (A4); first-of-its-kind design work despite small scope |
+| Skills-migration coordination (C1) | Medium | Cross-branch sequencing dependency outside this issue's direct control |
+| README/CHANGELOG updates | Low | Standard, bounded documentation additions |
+
+**Primary uncertainty drivers:**
+
+- Whether `Get-NextIssues.ps1` requires actual scoring-logic code changes or just
+  a config entry (D2 item 2) — unresolved until planning reads the script
+  directly.
+- Timing and coordination of the skills-migration merge (C1) is outside this
+  issue's direct control — could introduce schedule risk if not resolved before
+  planning starts.
+- The micro-plan comment template (C3) has no existing precedent to copy from —
+  small in scope, but genuinely first-of-its-kind design work.
+
+**Upgrade trigger:** Upgrade to the next size if `Get-NextIssues.ps1` requires new
+scoring logic beyond a simple config lookup, or if the skills migration (C1) is
+not merged to the release branch by the time planning starts, forcing this issue
+to also carry that merge.
