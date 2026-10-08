@@ -1,20 +1,9 @@
 ---
-agent: agent
-description: >
-  Quality gate: certifies that investigation is complete and advances the issue from
-  status:investigating to status:plan. Reads the investigation doc from docs/main,
-  verifies quality, then updates GH labels and project board. No PR is merged — this
-  prompt is a human quality gate, not a merge gate.
+name: approve-ready-for-plan
+description: Quality gate: certifies that investigation is complete and advances the issue from status:investigating to status:plan. Reads the investigation doc from docs/main, verifies quality, then updates GH labels and project board. No PR is merged — this prompt is a human quality gate, not a merge gate.
+disable-model-invocation: true
 argument-hint: "Issue number (e.g. /approve-ready-for-plan 103)"
-tools:
-  - agent
-  - execute
-  - read
-  - search
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-
 ---
-
 # Approve Ready for Plan
 
 > ⛔ **This prompt must be run from the release worktree (`C:\wt\wara\release\<release>`), not from

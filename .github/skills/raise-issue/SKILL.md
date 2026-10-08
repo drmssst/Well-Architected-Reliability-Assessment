@@ -1,19 +1,9 @@
 ---
-agent: agent
-description: >
-  Creates a new GitHub issue and adds it to the project board at status:investigate
-  in the Backlog milestone. No branch, no PR, no planning doc — a well-formed backlog
-  pitch only. Run from the release workspace. Issue is immediately visible on the
-  project board.
+name: raise-issue
+description: Creates a new GitHub issue and adds it to the project board at status:investigate in the Backlog milestone. No branch, no PR, no planning doc — a well-formed backlog pitch only. Run from the release workspace. Issue is immediately visible on the project board.
+disable-model-invocation: true
 argument-hint: "Brief description of the issue — e.g. 'add per-site token substitution'"
-tools:
-  - agent
-  - execute
-  - read
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-
 ---
-
 # Raise New Issue Workflow
 
 ## Step 1 — Gather issue details

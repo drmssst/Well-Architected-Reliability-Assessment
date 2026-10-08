@@ -1,27 +1,9 @@
 ---
-agent: agent
-description: >
-  Implements an approved plan for a status:implement issue. Reads the plan doc from
-  docs/main, works through the Affected Documents table, writes and runs tests, then
-  opens a PR targeting the release branch. Plan doc is on docs/main; code changes are
-  committed to the feature branch. Approve-ready-for-release merges the PR.
+name: implement-issue
+description: Implements an approved plan for a status:implement issue. Reads the plan doc from docs/main, works through the Affected Documents table, writes and runs tests, then opens a PR targeting the release branch. Plan doc is on docs/main; code changes are committed to the feature branch. Approve-ready-for-release merges the PR.
+disable-model-invocation: true
 argument-hint: "Issue number — e.g. 54"
-tools:
-  - agent
-  - browser
-  - edit
-  - execute
-  - read
-  - search
-  - todo
-  - vscode
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-  - github.vscode-pull-request-github/github-pull-request_create_pull_request
-  - github.vscode-pull-request-github/github-pull-request_currentActivePullRequest
-  - github.vscode-pull-request-github/github-pull-request_pullRequestStatusChecks
-
 ---
-
 # Issue Processing Workflow
 
 ## Gate policy — explicit approvals required

@@ -1,20 +1,9 @@
 ---
-agent: agent
-description: >
-  Quality gate: certifies that planning is complete and advances the issue from
-  status:planning to status:implement. Reads the plan doc from docs/main, verifies
-  quality, assigns the issue to the active release milestone, then updates GH labels
-  and project board. No PR is merged — this is a human quality gate.
+name: approve-ready-for-implement
+description: Quality gate: certifies that planning is complete and advances the issue from status:planning to status:implement. Reads the plan doc from docs/main, verifies quality, assigns the issue to the active release milestone, then updates GH labels and project board. No PR is merged — this is a human quality gate.
+disable-model-invocation: true
 argument-hint: "Issue number (e.g. /approve-ready-for-implement 103)"
-tools:
-  - agent
-  - execute
-  - read
-  - search
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-
 ---
-
 # Approve Ready for Implement
 
 > ⛔ **This prompt must be run from the release worktree (`C:\wt\wara\release\<release>`), not from

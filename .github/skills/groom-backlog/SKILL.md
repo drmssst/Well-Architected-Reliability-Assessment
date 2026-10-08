@@ -1,19 +1,9 @@
 ---
-agent: agent
-description: >
-  Backlog grooming workflow. Presents all open issues in the Backlog milestone,
-  sorted by urgency and importance, and guides the decision-maker through promoting,
-  deferring, or closing each one. Promoted issues are moved to the active release
-  milestone. Run from the release workspace.
+name: groom-backlog
+description: Backlog grooming workflow. Presents all open issues in the Backlog milestone, sorted by urgency and importance, and guides the decision-maker through promoting, deferring, or closing each one. Promoted issues are moved to the active release milestone. Run from the release workspace.
+disable-model-invocation: true
 argument-hint: "No argument needed — lists all Backlog issues automatically"
-tools:
-  - agent
-  - execute
-  - read
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-
 ---
-
 # Groom Backlog Workflow
 
 ## Step 0 — Verify release workspace

@@ -1,24 +1,9 @@
 ---
-agent: agent
-description: >
-  Merges a completed implementation PR into the release branch and closes the issue.
-  Run from the release worktree after /implement-issue stamps awaiting-approval.
-  Assumes the PR was already created by the submitter. Advances to status:release
-  and closes the GH issue per the close-on-merge-to-release model.
+name: approve-ready-for-release
+description: Merges a completed implementation PR into the release branch and closes the issue. Run from the release worktree after /implement-issue stamps awaiting-approval. Assumes the PR was already created by the submitter. Advances to status:release and closes the GH issue per the close-on-merge-to-release model.
+disable-model-invocation: true
 argument-hint: "Issue number (e.g. /approve-ready-for-release 107)"
-tools:
-  - agent
-  - browser
-  - execute
-  - read
-  - search
-  - github.vscode-pull-request-github/github-pull-request_issue_fetch
-  - github.vscode-pull-request-github/github-pull-request_create_pull_request
-  - github.vscode-pull-request-github/github-pull-request_currentActivePullRequest
-  - github.vscode-pull-request-github/github-pull-request_pullRequestStatusChecks
-
 ---
-
 # Approve Ready for Release
 
 > ⛔ **This prompt must be run from the release worktree (`C:\wt\wara\release\<release>`), not from
