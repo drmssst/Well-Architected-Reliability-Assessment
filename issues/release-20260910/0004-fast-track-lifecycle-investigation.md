@@ -222,78 +222,105 @@ subset after it defines the entry, state, artifact, approval, and escape contrac
 
 ### B1. Eligibility checklist (resolves A8.1)
 
-**Decision:** An issue is fast-track-eligible only if all of the following are true,
-each answered explicitly by the requester and recorded verbatim as evidence (issue
-body at raise time, or a structured comment at conversion time):
+**Decision:** An issue is fast-track-eligible only if all of the following are true.
+Each condition is answered explicitly, with evidence, by whoever is reading the code
+at that point: the investigator at scan 1 or in the Phase D assessment (B2), and again
+in the compact plan's fast-track check (B4). The approver verifies the recorded
+evidence (B5). The criteria live in one shared file that every consuming skill points
+to (C6):
 
 - Self-assessed size is `XS`.
 - Type label is `type:fix`, `type:chore`, or `type:docs` (`type:feat` is never
   eligible — new capability implies unknowns by definition).
-- The affected files are declared by name up front, with no numeric cap — a
-  papercut may legitimately touch many files (e.g., a mechanical rename or a
-  repeated label/string correction). Eligibility instead requires every declared
-  file to receive the same uniform, mechanical class of edit (e.g., an identical
-  substitution or an identical single-line value change), not a mix of unrelated
-  or judgment-dependent edits.
+- The affected files are named up front, with no numeric cap — a papercut may
+  legitimately touch many files (e.g., a mechanical rename or a repeated
+  label/string correction). Eligibility instead requires every named file, other
+  than the standard `CHANGELOG.md` entry that every change carries, to receive the
+  same uniform, mechanical class of edit (e.g., an identical substitution or an
+  identical single-line value change), not a mix of unrelated or
+  judgment-dependent edits.
 - No public surface changes: no exported function signature under
   `src/modules/**/*.psm1` and no `config/*.json` schema changes.
 - Fully reversible by a single revert commit — no data migration, no irreversible
   external side effect (e.g., live GitHub label/project taxonomy changes).
 - No new external dependency (no `package.json`/module import additions).
 
-**Rationale:** mirrors the existing type/urgency/importance self-declaration already
-collected at raise time (A2, A7) rather than introducing a new interaction style; a
-declared file list keeps the automated cross-check in B9 meaningful regardless of
-count, while gating on edit uniformity — rather than file count — targets what
-actually drives risk: a wide but uniform mechanical fix is not riskier for being
-spread across many files, and a single file can still carry high risk if its edit is
-complex.
+**Rationale:** naming every affected file and classifying the edit presupposes the code
+survey that investigation or planning performs, so asking the requester to declare them
+at raise time would be a guess. Answering where the code is actually read — and
+repeating the check in the compact plan, the first full read for an item that skipped
+investigation — makes the evidence real rather than self-declared. A named file list
+keeps the automated cross-check in B9 meaningful regardless of count, while gating on
+edit uniformity — rather than file count — targets what actually drives risk: a wide
+but uniform mechanical fix is not riskier for being spread across many files, and a
+single file can still carry high risk if its edit is complex. The conditions are the
+initial calibration: whether they admit enough papercuts without admitting
+non-papercuts is not yet known, so the route is measured from first use and tuned from
+evidence (B9, C11).
 
-**Alternatives considered:** using `XS` alone as the sole gate — rejected, because
-today no size estimate exists before investigation (A3), so an unsupported XS guess
-without the other proxies would be too easy to satisfy; a hard numeric file-count cap
-(e.g., at most 3 files) — considered and rejected, file count alone is only a weak
-proxy for risk and produces both false negatives (a wide but uniform mechanical fix)
-and false positives (a single complex file); requiring maintainer pre-verification
-before the checklist can even be submitted — rejected as an extra manual gate that
-duplicates the single approval gate decided in B5.
+**Alternatives considered:** answers declared by the requester at raise time —
+rejected, because the affected files and edit class are not knowable before the code
+is read; using `XS` alone as the sole gate — rejected, because today no size estimate
+exists before investigation (A3), so an unsupported XS guess without the other proxies
+would be too easy to satisfy; a hard numeric file-count cap (e.g., at most 3 files) —
+considered and rejected, file count alone is only a weak proxy for risk and produces
+both false negatives (a wide but uniform mechanical fix) and false positives (a single
+complex file); requiring maintainer pre-verification before the checklist can even be
+submitted — rejected as an extra manual gate that duplicates the approvals kept in B5.
 
 ### B2. Entry points (resolves A8.2)
 
-**Decision:** Support both entry points. (a) A new `raise-fast-track-issue/SKILL.md`
-gathers the same core details as `raise-issue/SKILL.md` (title, problem, type,
-urgency, importance) plus the B1 checklist, then creates the issue directly with the
-`lifecycle:fast-track` label and the board state from B3 — never touching
-`status:investigate`. (b) A new `convert-to-fast-track/SKILL.md`, run during backlog
-grooming, requires an existing issue at `status:investigate` with no
-`awaiting-approval` label, asks the same B1 checklist, and on success removes
-`status:investigate` and applies the same label/board state as (a). Both skills
-share one checklist step rather than duplicating the eligibility logic.
+**Decision:** No new entry skills. Fast-track is decided at two points inside skills
+that already exist, and both end the same way: the issue carries `lifecycle:fast-track`
+and sits at `status:plan`.
 
-**Rationale:** papercuts surface two ways in practice — obviously trivial at filing
-time, or discovered trivial while grooming an existing backlog item (which
-`groom-backlog/SKILL.md` already supports without changing status, per A1) — and
-both paths reuse identical criteria, so supporting both costs one shared checklist
-plus two thin entry skills rather than duplicated logic.
+- **Scan 1 — flagged at the start.** A new first step in `investigate-issue/SKILL.md`,
+  ahead of Step 0 so that the investigate worktree is never created for a flagged
+  item, reads the issue body and comments and evaluates the B1 checklist. It presents
+  the result and asks the person running the skill to confirm. On confirmation it
+  posts the checklist answers as a structured issue comment, adds
+  `lifecycle:fast-track`, moves the issue from `status:investigate` to `status:plan`
+  (label and board option), and stops: no investigation document is written. An item
+  that does not qualify, or that carries the escape marker (B6, C9), continues into
+  Step 0 as today. Either way the outcome and any failing conditions are recorded as
+  an issue comment (B9).
+- **Post-investigation decision.** When the Phase D findings suggest an item
+  qualifies, the investigator records a fast-track assessment (the B1 answers with
+  evidence) as a Phase D entry. At `approve-ready-for-plan/SKILL.md`, beside the
+  existing quality confirmation, the approver decides whether the item advances as
+  fast-track. If so, `lifecycle:fast-track` is added in the same transition that moves
+  the issue from `status:investigating` to `status:plan`; nothing else about that
+  transition changes. Either way the decision and any failing conditions are recorded
+  as an issue comment (B9).
 
-**Alternatives considered:** raise-time only — rejected, forces every backlog item
-later found trivial through full investigation, defeating the proportionality this
-issue asks for; conversion only — rejected, forces obviously-trivial-at-filing-time
-issues to wait for a grooming pass before gaining any benefit.
+**Rationale:** both points sit where the code is read (the start of the investigation
+prompt, or the investigation's own context survey), so the checklist is answered with
+evidence rather than by the requester (B1), and the decision runs in both directions:
+an item perceived as fast-track at the start can still be unmasked at planning (B4),
+and an item perceived as normal can be revealed as fast-track by its investigation.
+Reusing existing skills also removes the need for two new entry skills.
+
+**Alternatives considered:** a raise-time entry skill plus a grooming-time conversion
+skill — rejected, because they ask the requester to declare affected files before
+anyone has surveyed the code and they duplicate the checklist across two new files;
+deciding only at `approve-ready-for-plan` — rejected, because it leaves the full
+investigation cost in place for obvious papercuts.
 
 ### B3. Labels, project board, and backlog ranking (resolves A8.3)
 
 **Decision:** Add one new repository label, `lifecycle:fast-track`, applied as an
 orthogonal marker alongside existing `status:*` labels rather than replacing them —
 the same layering pattern `awaiting-approval` already uses (A1, A7). No new GH
-Project status field option is created. A fast-track issue occupies the existing
-`plan` status option while its micro-plan comment awaits the B5 approval gate, then
-moves directly to the existing `implementing` option once approved — skipping
-`investigate`, `investigating`, and `planning` entirely. `release`/`shipped`
-transitions are unchanged. `config/issue-priority-weights.json` gains one new
-additive bonus entry, `"lifecycle:fast-track"`, applied on top of whichever
-`status:*` stage weight already applies (not a replacement stage); the exact bonus
-value is deferred to planning.
+Project status field option is created, and the state machine is unchanged: a
+flagged item moves `status:investigate` → `status:plan` (scan 1) or
+`status:investigating` → `status:plan` (post-investigation decision) carrying the
+label, then follows the normal path with the existing board options —
+`status:planning` with `awaiting-approval`, `status:implement`, `status:implementing`,
+`status:release`. Ranking uses the existing stage weights. A `lifecycle:fast-track`
+bonus in `config/issue-priority-weights.json` is optional and deferred to planning
+(D2): `Get-NextIssues.ps1` reads only the urgency, importance and stage maps, the
+dependency keys and two hard-coded WIP rules, so a new key would be ignored and
+adopting a bonus requires a script change.
 
 **Rationale:** issue #1's own investigation (finding A3 in
 [0001-port-issue-lifecycle-tooling-investigation.md](0001-port-issue-lifecycle-tooling-investigation.md))
@@ -301,100 +328,133 @@ already found the live GH Project status field is managed outside repo version
 control and flagged the `releasing`/`superseded` gap this creates; adding new
 fast-track-specific status options would repeat that same unreviewable, external,
 un-rollback-able dependency. A label plus reuse of existing options keeps the entire
-change inside version control.
+change inside version control, and an unchanged state machine means every existing
+skill's `status:*` precondition keeps working.
 
 **Alternatives considered:** dedicated new project status options (e.g.
 `fast-track`, `fast-track-implementing`) — rejected for the external-dependency
 reason above; a `status:fast-track` label replacing `status:*` entirely — rejected,
 it would require a parallel state machine and break every existing skill's
-`status:investigate`-style precondition checks.
+`status:investigate`-style precondition checks; parking the issue at `plan` and moving
+it directly to `implementing` — rejected, because `implement-issue` starts only for
+`status:implement` and its Step 2 switches from that label, so the jump would be
+refused unless the skill's prerequisite and label switch were also changed.
 
 ### B4. Micro-plan location and structure (resolves A8.4)
 
-**Decision:** The micro-plan is posted as a single structured GitHub issue comment
-(`gh issue comment <N> --body ...`) — not a `docs/main` file, not a body edit —
-directly matching the issue's own phrase "compact issue-level micro-plan." Mandatory
-fields: Scope (1–2 sentences), Affected files (the same declared, uniformly-edited
-list from B1 — no numeric cap), Risk/reversibility statement, Test plan (what will
-be run and checked), and Version impact (`patch` or `minor`; `major` is already
-excluded by B1's no-public-surface-change rule). Implementation reads this comment
-the same way
-`implement-issue/SKILL.md` reads the plan doc today, and preserves it permanently —
-implementation results (test evidence, actual files touched) are posted as a
-follow-up comment rather than edited into the original, keeping an append-only trail.
+**Decision:** The micro-plan the issue calls for is a compact plan document.
+`plan-issue/SKILL.md` writes it at the normal plan path on `docs/main`
+(`<N-padded>-<slug>-plan.md`) when the issue carries `lifecycle:fast-track`. It keeps
+the same required headings and parseable fields as a full plan — affected documents
+(always including `CHANGELOG.md`), affected source files, version impact, testing
+requirements, acceptance criteria, the standard definition-of-done items, and the
+sizing estimate with its `**Estimate:**` line — because `approve-ready-for-implement`
+and `implement-issue` read and update them. Version impact is `patch` or `minor`;
+`major` is already excluded by B1's no-public-surface-change rule. The content is
+terse, and the document is written in one pass with one review gate instead of five.
+It adds a short fast-track check section that re-answers the B1 checklist with
+plan-level evidence; if any answer fails or the estimate is not `XS`, `plan-issue`
+stops and the item escapes (B6). Input: when an investigation document exists the plan
+is drafted from it; otherwise it is drafted from the issue body and comments,
+including the scan 1 checklist comment. Downstream consumption of the plan is
+unchanged, and implementation results are recorded in it as they are today.
 
-**Rationale:** an issue-level artifact removes `docs/main` from the fast-track path
-entirely, cutting one of the two document-producing surfaces (A4) out of the
-ceremony; GitHub comments are timestamped and attributable without a separate git
-commit/push/lint cycle, which is itself part of what makes the route compact.
+**Rationale:** writing the plan is the first full read of the affected code for an item
+that skipped investigation, so it gives at least one real opportunity to discover that a
+perceived fast-track is not one. Keeping the plan's structure means every downstream
+contract works as it does today: the `approve-ready-for-implement` section checks and
+size parse, and the `implement-issue` plan read, acceptance-criteria and
+definition-of-done updates, sizing reflection and pre-PR definition-of-done check. The
+cost is a `docs/main` commit per papercut, accepted in exchange for that opportunity.
 
-**Alternatives considered:** a shorter `docs/main` file mirroring today's convention
-— rejected, keeps the exact worktree/commit/push/lint ceremony this issue seeks to
-reduce, for marginal structural benefit; editing the issue body — rejected, it
-destroys or bloats the original problem statement rather than appending clean
+**Alternatives considered:** a single structured issue comment — rejected, because it
+gives no planning-time verification and would need fast-track branches in
+`approve-ready-for-implement` and in `implement-issue` Steps 1, 5, 8 and 9a, all of
+which read or write the plan document; a shorter document with a different structure
+— rejected, because it would break those parsers; editing the issue body — rejected,
+it destroys or bloats the original problem statement rather than appending clean
 evidence.
 
 ### B5. Mandatory gates and approval placement (resolves A8.5)
 
 **Decision:** All release-side controls stay mandatory and unchanged:
-`approve-ready-for-release`'s release-branch check, the doc-content gate (fast-track
-issues produce no investigation/plan docs, so this trivially passes), the pre-merge
-full Pester run, explicit human merge confirmation, and the post-merge label/board/
-closure transition. Changelog and version-classification requirements are retained
-unchanged from the normal Definition of Done. Exactly one new pre-implementation
-approval gate is added: once the B4 micro-plan comment is posted, a human reviewer
-confirms it — collapsing today's `approve-ready-for-plan` and
-`approve-ready-for-implement` into a single fast-track approval — before the label
-moves from `plan` to `implementing`.
+`approve-ready-for-release`'s release-branch check, the doc-content gate (it still
+passes, because the compact plan lives on `docs/main` and not in the pull request), the
+pre-merge full Pester run, explicit human merge confirmation, and the post-merge
+label/board/closure transition. Changelog and version-classification requirements are
+retained unchanged from the normal Definition of Done. No new approval gate or skill is
+added; the two existing approvals apply under one rule — one approval per artifact. An
+item flagged at the start produces one artifact before implementation (the compact
+plan), so `approve-ready-for-implement` is its only pre-implementation approval. An item
+revealed by investigation produces two (the investigation, then the compact plan) and
+keeps both approvals, the first of which carries the fast-track decision (B2). In both
+cases `approve-ready-for-implement` also verifies the plan's fast-track check and
+accepts the compact form.
 
 **Rationale:** the issue's problem statement explicitly requires preserving
 "traceability, validation, and release controls," and release-side gates are where
 release-quality validation actually happens (tests, PR review, merge control) at low
-relative cost; the ceremony being reduced is specifically the pre-implementation
-planning/investigation overhead, matching the issue's call for "proportionate
-approval gates" only on that side.
+relative cost. The ceremony being reduced is the investigation and planning overhead:
+the investigation approval disappears for an item that never had an investigation, and
+the documents shrink — not the gate count — for an item that did. Because
+`approve-ready-for-implement` already requires exactly `status:planning` plus
+`awaiting-approval` and sets `status:implement`, the milestone, the board option and the
+size, it serves as the fast-track approval without duplicating anything.
 
-**Alternatives considered:** 0 pre-implementation gates — rejected in favor of the
-explicit "1 gate" choice; 2 gates matching today's count — also rejected, and would
-be redundant once investigation and the full plan are both already skipped.
+**Alternatives considered:** 0 pre-implementation gates — rejected, the issue asks for
+proportionate rather than absent approval; a new dedicated fast-track approval skill —
+rejected, it would duplicate `approve-ready-for-implement`; a separate approval of the
+flag itself at scan 1 — rejected, because the plan approval verifies the same
+checklist evidence.
 
 ### B6. Escape hatch triggers and target state (resolves A8.6)
 
-**Decision:** Both automated and human-judgment triggers apply. Automated: the
-implementing skill stops and does not open a PR if the diff touches files beyond
-the B4 declared list, any declared file's edit breaks the declared uniform class
-(e.g., a materially larger or logic-bearing hunk next to otherwise-identical
-substitutions), any test (existing or new) fails, or the diff matches a
-public-surface pattern (exported `src/modules/**/*.psm1` signatures, or any
-`config/*.json` schema) — the same objective conditions used for entry in B1. Human:
-the assignee or the B5 reviewer may escalate at any time on subjective grounds, no
-automated detection required. On any trigger, the issue moves to `status:investigate`
-— not `status:plan` or `status:implement` — re-entering the normal lifecycle at its
-first stage.
+**Decision:** Both automated and human-judgment triggers apply. Automated: at planning,
+`plan-issue` stops and escapes the item if any answer in the fast-track check fails or
+the plan's sizing estimate is not `XS`; at implementation, `implement-issue` stops and
+does not open a PR if the diff touches files beyond the plan's affected documents and
+affected source files, any test (existing or new) fails, or the diff changes the public
+surface (an exported `src/modules/**/*.psm1` function signature, or any
+`config/*.json` schema) — the same objective conditions used for entry in B1. A
+declared file whose edit looks like an outlier is flagged for a human decision at the
+existing review pause instead of blocking (B9). Human: the assignee or the approver may
+escalate at any time on subjective grounds, no automated detection required. On any
+trigger the issue returns to the earliest normal stage whose artifact is missing:
+`status:investigate` when no investigation document exists (an item flagged at the
+start), or `status:plan` when one does (an item revealed by investigation). In the
+same transition `lifecycle:fast-track` is removed, and an item returning to
+`status:investigate` also receives a marker that stops scan 1 from flagging it again
+(C9), and the escape posts a comment stating the trigger (B9). The compact plan, if
+committed, stays on `docs/main` as prior art, renamed so a full plan can use the
+normal filename.
 
 **Rationale:** reusing the B1 checklist as the automated-threshold source means
 eligibility and escape share one rule set instead of two to maintain; human override
-covers risk categories no static check can see; returning to `status:investigate` is
-the only state consistent with "escape hatch back to the normal lifecycle" — none of
-the normal investigation work has actually been done yet, so re-entering mid-stream
-(e.g., at `status:plan`) would skip the phase that exists to de-risk exactly this
-situation.
+covers risk categories no static check can see. Returning to the earliest stage whose
+artifact is missing re-enters the normal lifecycle exactly where evidence is lacking:
+an item that skipped investigation receives the investigation it skipped, and an item
+with an approved investigation does not repeat it.
 
-**Alternatives considered:** escalating directly to `status:plan` — rejected, lets an
-item that already proved larger or riskier than assumed bypass the investigation
-phase; automated-only or human-only — both rejected in favor of the explicit "Both"
-choice.
+**Alternatives considered:** always returning to `status:investigate` — rejected,
+because it discards an approved investigation for an item revealed by investigation;
+always returning to `status:plan` — rejected, because it lets an item that skipped
+investigation and then proved larger or riskier than assumed bypass the phase that
+exists to de-risk exactly this situation; automated-only or human-only — both
+rejected in favor of the explicit "Both" choice.
 
 ### B7. Escaped-item evidence retention and re-estimation (resolves A8.7)
 
-**Decision:** Nothing is deleted on escalation. The original issue body/comments (B1
-checklist answers and the B4 micro-plan) remain permanently on the issue, and
-`investigate-issue/SKILL.md`'s context-survey step is read as prior art before
-Phase A is written, so the abandoned fast-track attempt shortens rather than wastes
-the resulting investigation. A full investigation document and full plan document
-are still required — no phase is grandfathered in from the fast-track attempt. Size
-and priority are recalculated from scratch via the normal investigation Phase D
-estimate; the original fast-track `XS` self-assessment is not carried forward.
+**Decision:** Nothing is deleted on escalation. The scan 1 checklist comment and the
+issue's other comments remain permanently on the issue, and the compact plan, if
+committed, stays on `docs/main` as prior art (B6). `investigate-issue/SKILL.md`'s
+context-survey step and `plan-issue/SKILL.md`'s context survey read them as prior art
+before the next document is written, so the abandoned fast-track attempt shortens
+rather than wastes the resulting work. The normal documents are still required for
+whatever was skipped: a full investigation document when none exists, and always a full
+plan document — no phase is grandfathered in from the fast-track attempt. Size and
+priority are recalculated from scratch, via the normal investigation Phase D estimate
+when the investigation is redone and via the full plan's sizing estimate otherwise; the
+original fast-track `XS` self-assessment is not carried forward.
 
 **Rationale:** preserves full traceability even in the failure path and turns the
 fast-track work into a head start instead of a sunk cost; not carrying the size
@@ -409,47 +469,72 @@ above.
 ### B8. Implementation worktree and skill reuse (resolves A8.8)
 
 **Decision:** Reuse `implement-issue/SKILL.md` and
-`New-IssueWorktree.ps1 -Stage implement` unchanged at the tooling level. Add one
-conditional branch at the top of `implement-issue/SKILL.md`'s Step 1: if the issue
-carries `lifecycle:fast-track`, read the B4 micro-plan issue comment instead of
-locating a `docs/main` plan file; every step from Step 2 onward (label switch,
-implementation, testing, changelog, PR to `release/*`, `awaiting-approval`) proceeds
-unchanged regardless of which source fed Step 1. No new worktree stage, skill file,
-or branch-naming convention is introduced for implementation.
+`New-IssueWorktree.ps1 -Stage implement` unchanged at the tooling level. The compact plan
+is a normal plan document on `docs/main` (B4) and an approved item reaches the skill at
+`status:implement` (B3), so the prerequisite check, the Step 1 plan read, the Step 2
+label switch and the plan updates in Steps 5, 8 and 9a work as they do today. The only
+addition is a guard for issues carrying `lifecycle:fast-track`, run before the pull
+request is opened: it compares the diff against the plan's affected documents and
+source files, checks its content for public-surface changes (B6, B9), and carries out
+the escape transition when a trigger fires. Its exact placement within Steps 7 to 9 is
+a planning detail. No new worktree stage, skill file, or branch-naming convention is
+introduced for implementation.
 
 **Rationale:** A5 already found `New-IssueWorktree.ps1` accepts an arbitrary `Stage`
 string with no validation, and every downstream implementation step is identical
 regardless of how the plan was produced; forking a second implementation skill
 would duplicate roughly 14 KB of maintained logic (A1) for a difference that is only
-where Step 1 reads its input from.
+the guard.
 
 **Alternatives considered:** a distinct `implement-fast-track-issue/SKILL.md` —
-rejected, duplicates Steps 2–7 verbatim for no behavioral difference beyond Step 1's
-data source, doubling future maintenance for identical logic.
+rejected, duplicates Steps 2–7 verbatim for no behavioral difference beyond the guard,
+doubling future maintenance for identical logic; a Step 1 branch that reads the plan
+from an issue comment — rejected with B4, because Steps 5, 8 and 9a also read or write
+the plan document.
 
 ### B9. Automated validation scope (resolves A8.9)
 
 **Decision:** No new Pester test suite is added for the lifecycle skills as part of
 this issue. The automated cross-check selected for B1/B6 is implemented as inline
-PowerShell validation inside the fast-track skills themselves (comparing
-`git diff --name-only`'s file list against the B4 declared list; flagging, for the
-B5 reviewer rather than auto-blocking, any declared file whose hunk size or shape is
-an outlier relative to the others, since uniformity is not fully machine-decidable;
-checking diff paths against the B6 public-surface patterns) — not a separate test
-file, and not new CI. Skill-level correctness continues to be validated the same
+PowerShell validation inside the `implement-issue` fast-track guard (B8): comparing
+`git diff --name-only`'s file list against the compact plan's affected documents and
+affected source files; flagging, for human decision at the existing per-group review
+pause rather than auto-blocking, any declared file other than the `CHANGELOG.md` entry
+whose hunk size or shape is an outlier relative to the others, since uniformity is not
+fully machine-decidable; checking the diff's content, not merely its paths, for B6
+public-surface changes — a changed `param` block, function declaration or export in a
+`src/modules/**/*.psm1` file, or an added, removed or renamed key in a `config/*.json`
+file, with the exact rules left to planning — not a separate test file, and not new
+CI. Skill-level correctness continues to be validated the same
 way every other lifecycle skill is today (A6: human execution and review), plus the
 specific manual papercut named in the issue.
+
+**Calibration:** the B1 conditions are an initial calibration, not a settled threshold
+(C11). No test suite or CI is added to tune them; the signals come from records that the
+lifecycle keeps or that this issue adds. Too lenient: a flagged item escapes (the
+`lifecycle:fast-track` label is removed, which the issue timeline preserves with its
+timestamp, and the escape comment states the trigger), or its recorded size later
+moves up from `XS`. Too strict: an item that was not flagged later reaches `XS` in its
+investigation estimate, plan estimate or reflection verdict, which is the size history
+moving down to `XS`. The issue timeline records label and board-status changes but has
+no event for the Size field, so the estimates in the investigation, the plan and its
+reflection are the size history. Every scan records its outcome, flagged or not, with
+the failing conditions, so the most frequent rejection reason is visible. A review
+after the first ten scans, or at the end of the release if that comes first, decides
+whether B1 is tightened or loosened (D2 items 9 and 10).
 
 **Rationale:** A6 found zero existing test coverage for any of the nine lifecycle
 skills or three helper scripts; building a first-of-its-kind skill-testing harness
 is a separately sized effort the issue's own text does not request, and adding it
 here would reintroduce the disproportionate-ceremony problem this issue exists to
-fix, just relocated into its own delivery.
+fix, just relocated into its own delivery. Calibration is measured instead of argued
+in advance because the right strictness depends on the issue mix to come, and only
+three issues exist to calibrate against (C11).
 
 **Alternatives considered:** a new Pester suite asserting skill structure or
 simulating label transitions — rejected as scope creep beyond what issue #4 asks
 for; skipping the automated cross-check entirely — rejected in favor of the explicit
-"Self-declared + automated cross-check" choice.
+"recorded evidence + automated cross-check" choice.
 
 ### B10. Follow-up papercut validation evidence (resolves A8.10)
 
@@ -462,37 +547,40 @@ creating a throwaway issue and confirming via `gh issue view --json labels` that
 for a freshly raised issue; (4) a rollback note — this is a single-line skill-text
 change with no schema or state migration, so rollback is a plain `git revert` of the
 one commit, verified by re-running step (2) against the pre-revert skill text to
-confirm the defect reproduces.
+confirm the defect reproduces; and (5) route evidence, because the papercut itself
+meets the B1 checklist (`type:fix`, `XS`, a single-line edit, no public surface
+change): the scan 1 checklist comment and the `lifecycle:fast-track` label on
+an issue at `status:plan` with no investigation document, the compact plan with its
+fast-track check, the single `approve-ready-for-implement` approval, the pull request
+with its test results, and the closing label, board and issue-state transitions.
 
 **Rationale:** derived directly from the exact defect found in A6; framed as
 reproducible before/after evidence so the validation itself models the same
-objective-evidence standard B1 establishes for eligibility.
+objective-evidence standard B1 establishes for eligibility. Evidence (5) covers the
+observable label, board, artifact, approval, test and release outcomes that A6 sets as
+the minimum validation scope, at no extra cost because the papercut is itself a
+fast-track item.
 
 **Alternatives considered:** none — this question has one well-evidenced answer once
 A6's finding is treated as the target defect.
 
 ## Phase C — Risks and prerequisites
 
-### C1. The skills migration must reach the release branch before implementation
+### C1. The skills migration must reach the release branch before implementation (satisfied)
 
-**Risk:** B2 and B8 target new and modified files under `.github/skills/<name>/
-SKILL.md` — the convention discovered mid-investigation to have replaced
-`.github/prompts/<name>.prompt.md` (A1). That migration commit currently lives only
-on this issue's own `investigate/issue-4-fast-track-lifecycle` branch, which is not
-merged anywhere else.
+**Risk:** the skills this issue modifies (B2, B4, B5, B8) live under
+`.github/skills/<name>/SKILL.md` — the convention that replaced
+`.github/prompts/<name>.prompt.md` (A1). If that migration were absent from the branch
+the implement worktree is created from, the target paths would not exist.
 
 **Mechanism:** `tools/New-IssueWorktree.ps1 -Stage implement` creates the
 implementation worktree from the release branch, not from this investigation branch.
-If `release/20260910` does not yet contain the skills migration when implementation
-starts, that worktree would still see the retired `.github/prompts/*.prompt.md`
-files, and B2/B8's target paths would not exist — breaking the plan before it starts.
 
-**Mitigation:** confirm the skills migration has been merged to `release/20260910`
-before implementation begins. If not yet merged, land it first via its own small,
-independently mergeable PR (it is unrelated to this issue's eligibility criteria), or
-explicitly carry the migration commit into this issue's own implementation branch.
-Planning should re-verify `.github/skills/` exists on whichever branch the implement
-worktree is created from, rather than assuming it.
+**Mitigation:** satisfied — commit `7d4cbbf` (`chore: migrate lifecycle prompts to
+.github/skills/<name>/SKILL.md convention`) is on `release/20260910` and
+`origin/release/20260910`, verified on 2026-10-07. Planning should still re-verify that
+`.github/skills/` exists on whichever branch the implement worktree is created from,
+rather than assuming it.
 
 ### C2. The `lifecycle:fast-track` label does not exist in the repository yet
 
@@ -502,76 +590,84 @@ exist on the repository (`gh issue edit --add-label`) — none of the nine skill
 create new labels.
 
 **Mechanism:** `gh issue edit --add-label` fails if the named label has not already
-been created on the repository (`gh label create`). The first fast-track issue raised
-or converted would fail at that step if the label was never created ahead of time.
+been created on the repository (`gh label create`). The first item flagged at scan 1 or
+advanced by the post-investigation decision would fail at that step if the label was
+never created ahead of time.
 
 **Mitigation:** implementation must include a one-time `gh label create
 "lifecycle:fast-track" --color <c> --description <d>` step (or manual confirmation
-that it already exists) before either B2 skill applies the label for the first time.
+that it already exists) before `investigate-issue` or `approve-ready-for-plan` applies
+the label for the first time. If the escape marker is a label (D2 item 3), it needs the
+same step.
 
-### C3. The B4 micro-plan comment has no fixed template yet
+### C3. The compact plan has no defined profile yet
 
-**Risk:** B4 names five mandatory fields for the micro-plan comment (Scope, Affected
-files, Risk/reversibility, Test plan, Version impact) but does not define a concrete
-Markdown structure for them, and A4 already found "no prompt, schema, or parser
-defines a reduced plan form" anywhere in the repository today.
+**Risk:** B4 requires the compact plan to keep the headings and parseable fields that
+the downstream skills read and to add a fast-track check, but nothing yet defines which
+parts may be terse, what the check contains, or how one review gate replaces five. A4
+already found "no prompt, schema, or parser defines a reduced plan form" anywhere in the
+repository today.
 
-**Mechanism:** without a fixed template, two downstream consumers have nothing
-concrete to check against: the B9 automated cross-check needs to reliably extract the
-"Affected files" list from free-form prose, and the B5 human reviewer has no
-checklist to confirm all five fields are actually present before approving. Either
-could silently pass an incomplete micro-plan.
+**Mechanism:** the downstream consumers parse fixed structure.
+`approve-ready-for-implement` checks the sections and reads the `**Estimate:**` line;
+`implement-issue` reads the affected documents, testing requirements, acceptance
+criteria and version impact, then updates the acceptance-criteria and
+definition-of-done checkboxes and appends to the sizing section. A compact plan that
+drops or renames any of them would fail silently — for example, an absent estimate only
+warns and skips the size update.
 
-**Mitigation:** planning must define a fixed Markdown template for the B4 comment
-(named headers per field, e.g. `### Affected files`), handed to both the B2 skills
-(to produce it) and the B9 cross-check (to parse it).
+**Mitigation:** planning defines the compact profile (D2 item 1): the required headings
+and fields kept verbatim, what may be terse, the fast-track check section, and the
+single review gate. The profile is handed to `plan-issue` (to produce it) and to
+`approve-ready-for-implement` (to verify it).
 
 ### C4. Escalation may leave a stale `lifecycle:fast-track` label behind
 
-**Risk:** B6 moves an escalated issue to `status:investigate`; B7 preserves all
-fast-track evidence "permanently on the issue." Neither explicitly addresses whether
-the `lifecycle:fast-track` label itself is removed on escalation.
+**Risk:** B6 returns an escaped item to an earlier stage; B7 preserves all fast-track
+evidence "permanently on the issue." Neither explicitly addresses whether the
+`lifecycle:fast-track` label itself is removed on escalation.
 
-**Mechanism:** B3's additive priority bonus in `config/issue-priority-weights.json`
-is keyed on the label being present, not on which lifecycle stage the issue occupies.
-If the label survives escalation, `Get-NextIssues.ps1` would keep applying the
-fast-track bonus to an issue that has already proven itself not eligible — over-
-ranking it against genuine `status:investigate` work for no justified reason.
+**Mechanism:** `plan-issue` selects compact mode from the label being present, not from
+the item's history. If the label survives escalation to `status:plan`, the next
+`/plan-issue` run would draft a compact plan for an item that has already failed the
+fast-track check. If a ranking bonus is adopted (D2 item 7), `Get-NextIssues.ps1` would
+also keep applying it to an item that has proven itself ineligible.
 
-**Mitigation:** add an explicit step to B6's escape-hatch procedure: remove
-`lifecycle:fast-track` in the same transition that adds `status:investigate` on
-escalation. The B4/B7 evidence (comments) stays; only the routing label is dropped.
+**Mitigation:** B6 removes `lifecycle:fast-track` in the same transition that returns
+the issue to the earlier stage. The evidence (comments, and the compact plan renamed on
+`docs/main`) stays; only the routing label is dropped.
 
-### C5. No automated test coverage for the new fast-track skills (considered and accepted)
+### C5. No automated test coverage for the modified skills (considered and accepted)
 
-**Risk:** B9 adds no Pester suite for the two new B2 skills or the modified B8
-conditional branch.
+**Risk:** B9 adds no Pester suite for the five modified skills or the new
+`implement-issue` guard.
 
 **Mechanism:** A6 already found zero existing test coverage for any of the nine
 current lifecycle skills or their three helper scripts — this issue does not change
-that baseline, it extends it to two more files.
+that baseline, it extends it to the new guard logic.
 
 **Mitigation:** none beyond what B9 already states — this is a deliberate,
 proportionate choice consistent with existing practice, not a new gap introduced by
 this issue. The B10 manual validation papercut is the acceptance check for the one
-concrete defect currently known.
+concrete defect currently known and, through its route evidence, for the fast-track
+route itself.
 
-### C6. B2's "shared checklist step" has no existing cross-skill include mechanism
+### C6. The shared checklist has no existing cross-skill include mechanism
 
-**Risk:** B2's rationale states both new skills "share one checklist step rather than
-duplicating the eligibility logic," but Phase A found no include, import, or
-transclusion mechanism between any of the nine existing skill files — each is a
-standalone, self-contained document.
+**Risk:** three skills now consume the B1 checklist — `investigate-issue` (scan 1 and
+the Phase D assessment), `approve-ready-for-plan` (the decision) and `plan-issue` (the
+fast-track check) — but Phase A found no include, import, or transclusion mechanism
+between any of the nine existing skill files; each is a standalone, self-contained
+document.
 
-**Mechanism:** without such a mechanism, "sharing" a step in practice means
-duplicating the same checklist text in both `raise-fast-track-issue/SKILL.md` and
-`convert-to-fast-track/SKILL.md`, which is a documentation-consistency risk (the two
-copies could drift out of sync on a future edit) rather than a functional one.
+**Mechanism:** without such a mechanism, "sharing" the checklist in practice means
+copying it into three skills, which is a documentation-consistency risk (the copies
+could drift out of sync on a future edit) rather than a functional one.
 
-**Mitigation:** accept duplication as the only option consistent with the existing
-convention (no new include mechanism is in scope for this issue); planning should
-note the duplication explicitly so a future edit to the B1 checklist knows to update
-both files.
+**Mitigation:** keep the criteria in one file under `.github/` that each skill points
+to instead of copying them. There is precedent: `implement-issue/SKILL.md` already
+points at `.github/COMMIT_GUIDELINES.md`. The file's name and exact content are
+deferred to planning (D2 item 5).
 
 ### C7. The GH Project status field remains externally managed (residual, inherited from issue #1)
 
@@ -579,9 +675,8 @@ both files.
 managed outside repository version control.
 
 **Mechanism:** B3 deliberately avoids adding new status options for exactly this
-reason, reusing the existing `plan` and `implementing` options instead. The
-underlying external-management exposure is therefore unchanged, not introduced by
-this issue.
+reason, using the existing options unchanged. The underlying external-management
+exposure is therefore unchanged, not introduced by this issue.
 
 **Mitigation:** none beyond what already exists for the rest of the lifecycle — this
 issue carries no incremental risk here; B3's design choice is itself the mitigation.
@@ -589,16 +684,73 @@ issue carries no incremental risk here; B3's design choice is itself the mitigat
 ### C8. Fast-track issues double-counting the `status:investigate` WIP bonus (false alarm)
 
 **Risk considered:** A5 found `Get-NextIssues.ps1` "applies a WIP bonus specifically
-to `status:investigate`"; B3 adds a second, additive `lifecycle:fast-track` bonus —
+to `status:investigate`"; if a `lifecycle:fast-track` bonus is adopted (D2 item 7),
 could the two stack unexpectedly while a fast-track issue is in flight?
 
-**Mechanism checked:** B3 places fast-track issues at the existing `plan` status
-option, skipping `status:investigate`/`investigating` entirely. The WIP bonus is keyed
-specifically to `status:investigate`, which a fast-track issue never occupies.
+**Mechanism checked:** the label is added only in the same transition that moves an
+item to `status:plan` (B2), so it never coexists with `status:investigate`; on
+escalation it is removed in the same transition that returns the item there (B6, C4).
+The WIP bonus is keyed specifically to `status:investigate`.
 
 **Conclusion:** false alarm — the two bonuses cannot stack because their trigger
-conditions (`status:investigate` vs. `status:plan`/`lifecycle:fast-track`) are
-mutually exclusive by construction. No mitigation needed.
+conditions (`status:investigate` vs. `lifecycle:fast-track`) are mutually exclusive by
+construction. No mitigation needed.
+
+### C9. Scan 1 can re-flag an item that has already escaped
+
+**Risk:** B6 returns an item that was flagged at the start to `status:investigate`,
+which is exactly where scan 1 runs.
+
+**Mechanism:** a human-judgment escape, or one whose cause the objective checklist
+cannot see, leaves the issue text unchanged, so scan 1 could evaluate the item as
+qualifying again and send it back to `status:plan` with the label — a loop.
+
+**Mitigation:** B6 adds a marker in the escape transition, and scan 1 skips any item
+that carries it. The marker's form — a label, or an escape comment that the scan
+checks for — is deferred to planning (D2 item 3).
+
+### C10. Items flagged at the start skip the investigation approval (considered and accepted)
+
+**Risk:** an item flagged by scan 1 reaches `status:plan` without a maintainer
+reviewing an investigation, so a non-qualifying item could be flagged.
+
+**Mechanism:** scan 1 is evaluated and confirmed by whoever runs `investigate-issue`;
+no approval occurs until the compact plan reaches `approve-ready-for-implement`.
+
+**Mitigation:** layered checks stand in for the skipped approval. The compact plan's
+fast-track check is the first full read of the affected code and escapes the item if
+any answer fails (B4, B6); the approver verifies the recorded evidence (B5); the
+implementation guard checks the diff against the plan (B8, B9); and every release-side
+control stays mandatory (B5). Accepted as proportionate to a risk class limited to `XS`,
+reversible, non-public-surface changes.
+
+### C11. The eligibility rules may be too strict or too lenient (accepted, measured)
+
+**Risk:** the B1 checklist and its `XS` gate may reject real papercuts, so the route
+saves little, or admit items that are not papercuts, so escapes waste effort. Neither
+rate can be known before the route has been used.
+
+**Mechanism:** a backtest of the repository history (565 non-merge commits since
+2024-07, of which 115 carry a `fix`, `chore` or `docs` prefix) shows that size is not
+the binding constraint: the median such change is 1 file and 6 lines, 65% touch one
+file, and 76% are small by a rough proxy (at most 3 files and 30 lines, no
+`config/*.json` or `package.json`). The conditions that cannot be backtested are the
+qualitative ones: the uniform, mechanical edit, the public-surface check (44% of these
+commits touch a module `.psm1`), and an `XS` with no definition in the repository's
+Markdown. Only three GitHub issues exist, so there is no issue-level history to
+calibrate against. The saving per eligible item is large — counting the STOP and
+confirm prompts in the skills as gates, an item flagged at the start needs 4
+pre-implementation gates instead of 13, and one flagged after investigation needs 9 —
+but implementation and release gates are unchanged, so the overall gain depends on how
+many items qualify.
+
+**Mitigation:** accept the uncertainty and measure from first use (B9, D2 items 9 and
+10), so that B1 is tuned later with evidence instead of argued now. Escapes, and a
+recorded size that moves up from `XS`, signal too much leniency; unflagged items that
+later reach `XS` signal too much strictness. The levers identified so far, to be
+applied only if the measurements call for them, are: a lenient screen at scan 1 with
+the strict check kept at planning, an objective `XS` definition (D2 item 11), and
+reading uniformity as one logical change.
 
 ## Phase D — Ready-to-plan summary
 
@@ -606,54 +758,103 @@ mutually exclusive by construction. No mitigation needed.
 
 | File | Change | Driven by |
 | --- | --- | --- |
-| `.github/skills/raise-fast-track-issue/SKILL.md` | New file — raise-time fast-track entry point | B2 |
-| `.github/skills/convert-to-fast-track/SKILL.md` | New file — grooming-time conversion entry point | B2 |
-| `.github/skills/implement-issue/SKILL.md` | Modified — add Step 1 conditional branch for `lifecycle:fast-track` | B8 |
-| `config/issue-priority-weights.json` | Modified — add `lifecycle:fast-track` additive bonus entry | B3 |
-| `tools/Get-NextIssues.ps1` | Conditional — only if scoring logic needs a new branch to apply the bonus (TBD, see D2) | C4, D2 |
+| `.github/skills/investigate-issue/SKILL.md` | Modified — scan 1 as a new first step ahead of Step 0, recording its outcome and failing conditions; fast-track assessment entry in Phase D | B2, B9 |
+| `.github/skills/approve-ready-for-plan/SKILL.md` | Modified — fast-track decision, recorded either way, beside the quality confirmation; add the label in the transition to `status:plan` | B2, B3, B9 |
+| `.github/skills/plan-issue/SKILL.md` | Modified — draft from the issue body and comments when no investigation document exists; compact mode, fast-track check and plan-time escape, with a comment stating the trigger, when the label is present | B4, B6, B9 |
+| `.github/skills/approve-ready-for-implement/SKILL.md` | Modified — verify the fast-track check and accept the compact plan | B5 |
+| `.github/skills/implement-issue/SKILL.md` | Modified — fast-track guard before the pull request is opened, with the escape transition and its comment; no Step 1 branch | B6, B8, B9 |
+| `.github/<criteria-file>.md` | New — the shared B1 criteria that the skills above point to; name in D2 | B1, C6 |
+| `config/issue-priority-weights.json` | Conditional — only if a ranking bonus is adopted (D2 item 7) | B3 |
+| `tools/Get-NextIssues.ps1` | Conditional — required if a ranking bonus is adopted, because the script ignores unknown weight keys (D2 item 7) | B3, C4 |
 | `README.md` | Modified — document the fast-track route alongside the existing lifecycle table | A1, A7 |
 | `CHANGELOG.md` | Modified — standard release entry | Definition of Done |
 
+The `lifecycle:fast-track` label itself is created once with `gh label create` (C2); it
+is not a repository file.
+
 ### D2. Decisions deferred to planning
 
-1. **Exact numeric bonus for `lifecycle:fast-track`** in
-   `config/issue-priority-weights.json` (B3 deferred this explicitly). Options:
-   (a) match the magnitude of the existing `status:investigate` WIP bonus; (b) a
-   smaller fractional bonus, reasoning that fast-track issues already skip two
-   stages and need less additional push.
+1. **Compact plan profile** (C3). The required headings and fields kept verbatim,
+   what may be terse, the content of the fast-track check, and the single review
+   gate. Options for the check: (a) a short fixed section placed first in the plan, so
+   a failed answer stops `plan-issue` before the rest is written — recommended; (b) a
+   checklist inside the definition of done.
 
-2. **Whether `tools/Get-NextIssues.ps1` requires code changes** to apply the new
-   bonus, or whether its scoring logic already reads
-   `config/issue-priority-weights.json` generically per label. Options:
-   (a) confirm it is already data-driven — no code change needed, drop the
-   conditional row from D1; (b) it requires a new scoring branch — keep it in
-   scope and size accordingly.
+2. **Scan evidence comment template** (B2). The literal structure of the issue comment
+   that scan 1 posts — named headers for each B1 condition and the result — so that
+   scan 1 produces it, `plan-issue` reads it, and the approver verifies it.
 
-3. **Color and description for the new `lifecycle:fast-track` label**
-   (`gh label create`, per C2). Options: (a) match the existing
+3. **Escape marker** (C9). Options: (a) a repository label — visible on the board and
+   cheap to check, but a second label to create (C2); (b) an escape comment that
+   scan 1 searches for — no new label, but it depends on comment parsing.
+   Recommended: (a).
+
+4. **Compact plan rename on escape** (B6). Options: (a) a distinct suffix on the
+   filename, e.g. `<N-padded>-<slug>-fast-track-plan.md` — recommended; (b) keep the
+   name and let the full plan replace it, relying on git history.
+
+5. **Shared criteria file** (B1, C6). Name and location. Options: (a)
+   `.github/FAST_TRACK_CRITERIA.md`, following `.github/COMMIT_GUIDELINES.md` —
+   recommended; (b) a page under `docs/`.
+
+6. **Label name, color and description** (C2). `lifecycle:fast-track` is used
+   throughout this document; the bare `fast-track` works equally well, and nothing in
+   the tooling depends on the choice. For color: (a) match the existing
    `urgency:*`/`importance:*` severity-style palette; (b) a distinct neutral
    color, since B3 frames this label as an orthogonal marker, not a severity
    signal — recommended, to avoid implying false urgency.
 
-4. **Exact Markdown template for the B4 micro-plan comment** (no existing
-   precedent, per C3). Planning must draft the literal headers/structure (e.g.,
-   `### Scope`, `### Affected files`, ...) so both B2 skills (produce it) and the
-   B9 cross-check (parse it) share one concrete format.
+7. **Ranking bonus** (B3). Whether to adopt one at all. Options: (a) none — papercuts
+   rank by their existing urgency, importance and stage; (b) an additive bonus keyed
+   on the label, which needs a new scoring branch in `tools/Get-NextIssues.ps1` and a
+   value — either matching the magnitude of the existing `status:investigate` WIP
+   bonus or a smaller fractional bonus.
+
+8. **Guard placement in `implement-issue`** (B8). Options: (a) a pre-flight inside
+   Step 9a, immediately before the pull request is opened — recommended, because B6
+   stops the skill before the PR; (b) additionally before the Step 7 commit.
+
+9. **Calibration records** (B9, C11). Options for the scan outcome record: (a) an
+   issue comment on every scan, flagged or not, in a fixed format that lists the
+   failing conditions — recommended, because it is uniform, queryable through the
+   issue, and independent of whether an investigation document is written; (b) a line
+   in the investigation document, which does not exist for an item flagged at the
+   start. The escape comment states its trigger in the same format.
+
+10. **Calibration review** (B9, C11). Cadence: after the first ten scans or at the end
+    of the release, whichever comes first. Method: (a) ad hoc queries over the issue
+    timeline, the comments and the estimates in the documents; (b) a small read-only
+    report script under `tools/`. A starting rule from the gate counts in C11: a
+    scan 1 flag pays off while about one in four flagged items survives the plan-time
+    check (one in three for the post-investigation decision), because a correct flag
+    saves 9 gates and a rejected one wastes about 3 (4 and 2 for the post-investigation
+    decision); planning re-verifies those counts.
+
+11. **`XS` definition** (B1, C11). The scale XS to XL is named in `investigate-issue`
+    and `plan-issue` but not defined in the repository's Markdown, so the size signals
+    need one consistent meaning. Options: (a) a time-based definition, such as work an
+    experienced contributor completes and verifies within about an hour; (b) an anchor
+    from the repository history, where the median fix, chore or docs change is 1 file
+    and 6 lines and 77% are at most 30 lines — as guidance rather than a cap.
 
 ### D3. Recommended commit strategy
 
-Four commits, in this order:
+Six commits, in this order, with the one-time `gh label create` (C2) run before the
+second:
 
-1. `feat(#4): add raise-fast-track-issue and convert-to-fast-track skills` — the
-   two new B2 entry points together; they share the B1 checklist and are
-   naturally reviewed as a pair.
-2. `feat(#4): branch implement-issue on lifecycle:fast-track` — the isolated B8
-   conditional change.
-3. `feat(#4): add lifecycle:fast-track label and priority bonus` — the
-   `gh label create` action plus the `config/issue-priority-weights.json` entry
-   (and `tools/Get-NextIssues.ps1` changes, if D2 item 2 determines they are
-   needed), grouped as one prioritization concern.
-4. `docs(#4): document fast-track route and changelog entry` — `README.md` and
+1. `docs(#4): add shared fast-track criteria` — the new criteria file that the skills
+   point to.
+2. `feat(#4): flag fast-track candidates in investigate-issue and approve-ready-for-plan`
+   — scan 1, the Phase D assessment, the approver decision and the label transition,
+   which share the B1 checklist and are naturally reviewed as a pair.
+3. `feat(#4): compact plan mode in plan-issue and approve-ready-for-implement` — the
+   input fallback, the compact profile and fast-track check, and the approver's
+   verification.
+4. `feat(#4): fast-track guard and escape in implement-issue` — the isolated guard and
+   escape transition.
+5. `feat(#4): rank fast-track items` — conditional: only if D2 item 7 adopts a bonus
+   (the weights entry and the `tools/Get-NextIssues.ps1` change).
+6. `docs(#4): document fast-track route and changelog entry` — `README.md` and
    `CHANGELOG.md`, last, matching the standard pattern A2 describes.
 
 ### D4. Test requirements
@@ -672,26 +873,29 @@ route's real-world behavior.
 
 | Driver | Weight | Reasoning |
 | --- | --- | --- |
-| New skill files (B2) | Medium | Two new files, closely patterned on the nine existing skills (A1) — low novelty, bounded effort |
-| Modified implement-issue skill (B8) | Low | Single conditional branch in Step 1; rest of skill unchanged |
-| Label and priority config (B3, C2) | Low | One `gh label create` plus one JSON entry; mechanical |
-| Priority scoring integration (D2 item 2) | Medium | Unresolved whether `Get-NextIssues.ps1` needs new scoring logic or just a config entry |
-| Micro-plan template design (C3) | Medium | No existing precedent in the repo (A4); first-of-its-kind design work despite small scope |
-| Skills-migration coordination (C1) | Medium | Cross-branch sequencing dependency outside this issue's direct control |
+| Entry scan and decision (B2) | Medium | Scan 1 and the Phase D assessment in `investigate-issue`, and the approver decision in `approve-ready-for-plan` — bounded edits, but both skills are staged, human-gated flows that must stay consistent |
+| Compact plan mode (B4, B5) | Medium | The largest edit: input fallback, compact profile, fast-track check and one review gate in `plan-issue`, plus the matching verification in `approve-ready-for-implement` |
+| Implementation guard and escape (B6, B8, B9) | Medium | New PowerShell comparison of the diff against the plan's tables, plus a content check for public-surface changes and the escape transition, in `implement-issue` |
+| Shared criteria file and escape marker (B1, C6, C9) | Low | One short `.github/` file and one marker |
+| Label creation (C2) | Low | One `gh label create` (two if the escape marker is a label) |
+| Calibration records (B9, C11) | Low | One comment format and recording points in skills that are already being modified; the review is ad hoc or a small read-only script (D2 items 9, 10) |
+| Optional ranking bonus (D2 item 7) | Low if dropped, Medium if adopted | `Get-NextIssues.ps1` ignores unknown weight keys, so a bonus needs a scoring branch |
 | README/CHANGELOG updates | Low | Standard, bounded documentation additions |
 
 **Primary uncertainty drivers:**
 
-- Whether `Get-NextIssues.ps1` requires actual scoring-logic code changes or just
-  a config entry (D2 item 2) — unresolved until planning reads the script
-  directly.
-- Timing and coordination of the skills-migration merge (C1) is outside this
-  issue's direct control — could introduce schedule risk if not resolved before
-  planning starts.
-- The micro-plan comment template (C3) has no existing precedent to copy from —
-  small in scope, but genuinely first-of-its-kind design work.
+- Whether the compact profile can satisfy `approve-ready-for-implement` and
+  `implement-issue` without changing their parsers (C3) — unresolved until planning
+  defines the profile against the skills' exact parse points.
+- How the guard reads the plan's affected-documents and source-file tables (B9) —
+  small logic, but first-of-its-kind and untested (C5).
+- Whether a ranking bonus is adopted (D2 item 7) — if so, a scoring change in
+  `Get-NextIssues.ps1` joins the scope.
+- How many items the B1 rules admit (C11) — this does not change the implementation
+  size, but it decides how much of the intended saving is realized, and it is only
+  known by measuring.
 
-**Upgrade trigger:** Upgrade to the next size if `Get-NextIssues.ps1` requires new
-scoring logic beyond a simple config lookup, or if the skills migration (C1) is
-not merged to the release branch by the time planning starts, forcing this issue
-to also carry that merge.
+**Upgrade trigger:** Upgrade to the next size if the compact profile cannot satisfy
+`approve-ready-for-implement` and `implement-issue` without changing their parsers, or
+if a ranking bonus is adopted, since it adds a scoring change to
+`tools/Get-NextIssues.ps1`.
