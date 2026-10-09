@@ -1,6 +1,6 @@
 ---
 name: investigate-issue
-description: Investigates a GitHub issue: surveys the codebase, writes four staged investigation phases (Findings, Approach, Risks, Summary) to a new investigation doc on the docs/main branch, then stamps awaiting-approval. No PR is opened — investigation docs go directly to docs/main. Approve-ready-for-plan advances the issue to status:plan.
+description: Investigates a GitHub issue. A fast-track scan (scan 1) runs first and moves an eligible low-risk XS papercut straight to status:plan with no investigation. Otherwise the skill surveys the codebase, writes four staged investigation phases (Findings, Approach, Risks, Summary) to a new investigation doc on the docs/main branch, then stamps awaiting-approval. No PR is opened — investigation docs go directly to docs/main. Approve-ready-for-plan advances the issue to status:plan.
 disable-model-invocation: true
 argument-hint: "Issue number — e.g. 117"
 ---
@@ -17,6 +17,100 @@ only — no decisions until Phase B.
 
 **Staged document workflow:** Write one phase at a time. After each phase, stop and ask
 the user to review. Do not write the next phase until the user explicitly accepts.
+
+---
+
+## Scan 1 — Fast-track scan
+
+Runs before Step 0, so no investigate worktree is created for a flagged item. The six
+conditions, the `XS` definition, the provisional flag rules and the comment template are
+defined once in `.github/FAST_TRACK_CRITERIA.md`; read it before scanning and do not
+restate it here.
+
+**1a — Skip check.** Skip scan 1 and go straight to Step 0 when the issue carries
+`lifecycle:fast-track-escaped` or already has a `## Fast-track scan` comment. The second
+case also covers the rerun inside the investigate worktree, so an item is never scanned
+twice.
+
+```powershell
+$issue = gh issue view <N> --json labels,comments | ConvertFrom-Json
+$escaped = $issue.labels.name -contains 'lifecycle:fast-track-escaped'
+$scanned = @($issue.comments | Where-Object { $_.body -like '## Fast-track scan*' }).Count -gt 0
+"escaped=$escaped scanned=$scanned"
+```
+
+**1b — Evaluate.** Answer the six conditions of the Eligibility checklist from the issue
+body and comments and a bounded read of the code, only as deep as each row needs. If the
+issue names no code, a few searches from its symptom are enough to find the likely
+location; stop there. Do not start the investigation and do not write to docs/main.
+
+Scan 1 runs before the investigation, so a row you cannot yet support with evidence is
+`Likely` when nothing seen argues against it, and `No` when something does. Row 2 is
+never `Likely`. Then give the XS likelihood (High, Medium or Low) as the criteria file
+defines it, and set row 1 from it. Present the table (Condition, Met, Evidence), the XS
+likelihood and the result in chat.
+
+**1c — Decide.** The result follows the rows, as the criteria file defines:
+
+- Any row is `No`: the result is `NOT FLAGGED`. Post the scan comment (1d), ask nothing,
+  and continue to Step 0.
+- All six rows are `Yes`: ask **"All six fast-track conditions hold. Flag #N as
+  fast-track and skip investigation? (yes / no)"**
+- No row is `No` and at least one is `Likely`: ask **"The XS likelihood is High, but the
+  rows marked Likely are not yet evidenced. Flag #N provisionally? The compact plan's
+  check verifies them, and the item goes back to the normal route if any fails.
+  (yes / no)"**
+
+> ⛔ **STOP — post, label and transition nothing until the user answers.**
+
+On **yes** the result is `FLAGGED` (all rows `Yes`) or `FLAGGED (provisional)` (any row
+`Likely`): post the scan comment (1d), then flag the issue (1e) and stop. On **no** the
+result is `NOT FLAGGED` with `Failing conditions` set to `none (declined: <reason>)`,
+taking a one-line reason from the user: post the scan comment (1d) and continue to
+Step 0.
+
+**1d — Post the scan comment.** Use the Scan comment template in the criteria file with
+Context `scan 1`, including the `XS likelihood` line. `Confirmed by` is the GitHub login
+of the person running the skill (`gh api user --jq .login`). The first line must be
+`## Fast-track scan`, because the skip check above and the surveys in the other skills
+search for it.
+
+```powershell
+@'
+<scan comment, filled in from the template>
+'@ | gh issue comment <N> --body-file -
+```
+
+**1e — Flag the issue (`FLAGGED` only).** Add `lifecycle:fast-track` in the same
+`gh issue edit` that moves `status:investigate` to `status:plan`, then move the board:
+
+```powershell
+$c = & tools/Get-GhProjectConstants.ps1
+
+gh issue edit <N> `
+  --remove-label "status:investigate" `
+  --add-label "status:plan" `
+  --add-label "lifecycle:fast-track"
+
+$itemId = gh project item-list $c.number --owner $c.owner --format json --limit 100 |
+  ConvertFrom-Json | Select-Object -ExpandProperty items |
+  Where-Object { $_.content.number -eq <N> } |
+  Select-Object -ExpandProperty id
+
+gh project item-edit --project-id $c.id --id $itemId `
+  --field-id $c.statusFieldId `
+  --single-select-option-id $c.statusOptions.plan
+```
+
+Then tell the user:
+> "Issue #N is flagged fast-track and now at `status:plan`. No investigation document is
+> written. **To write the compact plan:** open a Copilot Chat from the `wara` release
+> worktree and run `/plan-issue <N>`."
+
+For a provisional flag, add that the rows marked `Likely` are verified by the compact
+plan's check, and that the item goes back to the normal route if any of them fails.
+
+> ⛔ **STOP — a flagged issue does not continue to Step 0.**
 
 ---
 
@@ -139,6 +233,16 @@ only what is needed to answer the open questions. Common sources:
 - Prompt files that reference the affected area
 - Config or schema files in scope
 - Existing Pester tests that cover affected functions (`src/tests/`)
+- Earlier fast-track records, read as prior art (below)
+
+Earlier fast-track records are prior art, not conclusions: the `## Fast-track scan` and
+`## Fast-track escape` comments on the issue and any abandoned compact plan
+(`-plan-fast-track.md`). Their evidence shortens the survey.
+
+```powershell
+gh issue view <N> --json comments --jq '.comments[].body | select(startswith("## Fast-track"))'
+Get-ChildItem $issueDocDir -Filter "<N-padded>-*-plan-fast-track.md"
+```
 
 Use `semantic_search` and `grep_search` as needed. Do not narrate survey findings in
 chat — they belong in Phase A. Proceed directly to writing Phase A.
@@ -249,10 +353,20 @@ Lint and tell the user:
 Write a concise summary: file-in-scope table, decisions deferred to planning (with
 options), recommended commit strategy, whether new tests are required.
 
+When the findings suggest the item qualifies for the fast-track route, add a
+`### D<N>. Fast-track assessment` entry after the other D entries and immediately before
+the Sizing estimate. It is the six-condition table (Condition, Met, Evidence) from the
+Eligibility checklist in `.github/FAST_TRACK_CRITERIA.md`, answered `Yes` or `No` with
+evidence from this investigation (`Likely` is for scan 1 only), plus one line saying
+whether the item qualifies. Do not add the label or change the issue state here;
+`approve-ready-for-plan` carries the decision.
+Omit the entry when the findings clearly rule the item out.
+
 Close Phase D with a **Sizing estimate** sub-section as the **last item** — written
 after all other D entries, immediately before the transition message to the user. Do
 not assign it a `D<N>` number — head it simply as `### Sizing estimate`. Use the
-T-shirt scale XS / S / M / L / XL. Structure:
+T-shirt scale XS / S / M / L / XL, with `XS` as defined in the XS definition section of
+`.github/FAST_TRACK_CRITERIA.md`. Structure:
 
 - One-line verdict: `**Estimate:** <size>`
 - A driver table (columns: Driver, Weight, Reasoning) with one row per significant

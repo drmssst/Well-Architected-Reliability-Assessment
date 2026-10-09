@@ -70,13 +70,46 @@ Read the investigation doc and verify all four phases are present and substantiv
 Present a one-paragraph quality summary. If any phase is missing or thin, describe the
 gap and ask the user how to proceed before advancing labels.
 
+**Fast-track decision.** Answer the six conditions of the Eligibility checklist in
+`.github/FAST_TRACK_CRITERIA.md`, each `Yes` or `No`, from this document, the issue
+labels and the Sizing estimate. If Phase D has a fast-track assessment entry, use it as
+input and verify its
+evidence; if it has none, answer the rows from the document the same way. Present the
+table (Condition, Met, Evidence). The result is `FLAGGED` only when all six rows are
+`Yes` and the user replies `fast-track` below; otherwise it is `NOT FLAGGED`.
+
 Ask: **"Does the investigation meet your quality bar? Confirm to advance to status:plan."**
 
-Do not proceed until the user confirms.
+When all six rows are `Yes`, add the fast-track choice to the same prompt: **"Does the
+investigation meet your quality bar? Confirm to advance to status:plan. Reply
+`fast-track` to advance it as a fast-track item (compact plan), or `confirm` to advance
+it normally."**
+
+Do not proceed until the user confirms. The one reply settles both the quality
+confirmation and the fast-track answer; there is no separate gate.
 
 ---
 
 ## Step 3 — Advance GH labels and board
+
+Post the scan comment first; it records the decision either way, so post it for a
+`NOT FLAGGED` result too. Use the Scan comment template in
+`.github/FAST_TRACK_CRITERIA.md` with Context `post-investigation decision`, leave out the
+`XS likelihood` line, and answer each row `Yes` or `No`. The result is `FLAGGED` when the
+user replied `fast-track`. Otherwise it is `NOT FLAGGED`, with the rows answered `No` as
+the failing conditions, or `none (declined: <reason>)` when all six were `Yes` and the
+user replied `confirm`. `Confirmed by` is your GitHub login (`gh api user --jq .login`),
+and the first line must be `## Fast-track scan`.
+
+```powershell
+@'
+<scan comment, filled in from the template>
+'@ | gh issue comment <N> --body-file -
+```
+
+Then advance the labels and the board. For a fast-track item, add
+`--add-label "lifecycle:fast-track"` to the same `gh issue edit` command, so the label and
+the move to `status:plan` happen together.
 
 ```powershell
 $c = & tools/Get-GhProjectConstants.ps1
@@ -155,3 +188,11 @@ window first and rerun.
 >
 > **To write the implementation plan:** open a Copilot Chat from the
 > `wara` release worktree and run `/plan-issue <N>`.
+
+For a fast-track item, report instead:
+
+> Issue #N is now at `status:plan` and carries `lifecycle:fast-track`.
+>
+> **To write the compact plan:** open a Copilot Chat from the `wara` release worktree and
+> run `/plan-issue <N>`. It detects the label and writes a compact plan behind one review
+> gate.
