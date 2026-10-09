@@ -192,6 +192,12 @@ tools/Invoke-Pester.ps1 src/tests/
 
 Record the result. It must show zero failures before continuing.
 
+For an issue carrying `lifecycle:fast-track`, a failing test in either run is an escape
+trigger, not a fix-and-retry. Stop, show the failure to the user, and follow Confirming an
+escape in `.github/FAST_TRACK_CRITERIA.md`. Run the escape procedure with
+`$stage = 'implement-issue Step 4'` and a `$trigger` holding the failing test and the
+user's view, only when the user agrees.
+
 ---
 
 ## Step 5 — Update supporting documents
@@ -364,6 +370,142 @@ Ask: **"Are you ready to move to PR?"** Do not proceed until they confirm.
 
 ### 9a — Pre-flight check
 
+**Fast-track guard.** When the issue carries `lifecycle:fast-track`, run the guard first.
+It cross-checks the diff against the plan, and the public surface it compares is defined
+in `.github/FAST_TRACK_CRITERIA.md`. It only reports; it takes no GitHub action.
+
+```powershell
+# Inputs. Replace these lines to run the guard elsewhere, for example in a scratch repository.
+$n = <N>
+$milestone = gh issue view $n --json milestone --jq '.milestone.title // "backlog"'
+$releaseFolder = if ($milestone -match '^Backlog$') { 'backlog' } else { $milestone -replace 'release/', 'release-' }
+$planDoc = (Get-ChildItem "C:\wt\wara\docs\issues\$releaseFolder" -Filter ('{0:D4}-*-plan.md' -f $n) | Select-Object -First 1).FullName
+$base = "origin/$milestone"
+git fetch origin --quiet
+
+if (-not $planDoc) { throw "No plan doc found for #$n." }
+$mergeBase = git merge-base $base HEAD
+if (-not $mergeBase) { throw "No merge base between $base and HEAD." }
+$changed = @(git diff --name-only --no-renames "$base...HEAD")
+if ($changed.Count -eq 0) { throw "No changes found against $base." }
+$escapes = [System.Collections.Generic.List[string]]::new()
+$outliers = [System.Collections.Generic.List[string]]::new()
+
+function Get-FileAtRevision {
+    param([string] $Revision, [string] $Path)
+    $text = git show "${Revision}:$Path" 2>$null
+    if ($LASTEXITCODE -eq 0) { $text -join "`n" }
+}
+
+function Get-JsonKeyPath {
+    param($Node, [string] $Prefix)
+    if ($Node -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($property in $Node.PSObject.Properties) {
+            $keyPath = if ($Prefix) { "$Prefix.$($property.Name)" } else { $property.Name }
+            $keyPath
+            Get-JsonKeyPath -Node $property.Value -Prefix $keyPath
+        }
+    }
+    elseif ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [string]) {
+        foreach ($item in $Node) { Get-JsonKeyPath -Node $item -Prefix "$Prefix[]" }
+    }
+}
+
+function Get-PublicSurface {
+    param([string] $Path, $Text)
+    if ($null -eq $Text) { return }
+    if ($Path -like '*.json') {
+        Get-JsonKeyPath -Node ($Text | ConvertFrom-Json -ErrorAction Stop) -Prefix ''
+        return
+    }
+    if ($Path -like '*.psd1') {
+        $manifest = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ('{0}.psd1' -f [guid]::NewGuid())
+        try {
+            Set-Content -LiteralPath $manifest -Value $Text
+            $data = Import-PowerShellDataFile -LiteralPath $manifest
+        }
+        finally { Remove-Item -LiteralPath $manifest -ErrorAction SilentlyContinue }
+        foreach ($name in @($data.FunctionsToExport)) { "export $name" }
+        return
+    }
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseInput($Text, [ref]$null, [ref]$parseErrors)
+    if ($parseErrors.Count -gt 0) { throw $parseErrors[0].Message }
+    $definitions = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
+    foreach ($definition in $definitions) {
+        "function $($definition.Name)"
+        $parameters = @(if ($definition.Parameters) { $definition.Parameters } elseif ($definition.Body.ParamBlock) { $definition.Body.ParamBlock.Parameters })
+        for ($i = 0; $i -lt $parameters.Count; $i++) {
+            "param $($definition.Name)[$i] $($parameters[$i].Extent.Text -replace '\s+', ' ')"
+        }
+    }
+    if ($ast.ParamBlock) {
+        foreach ($parameter in $ast.ParamBlock.Parameters) { "param script $($parameter.Extent.Text -replace '\s+', ' ')" }
+    }
+}
+
+# Rule 1: every changed file is declared in the plan's affected-file tables.
+$planText = Get-Content -LiteralPath $planDoc -Raw
+$declared = @(foreach ($heading in 'Affected documents', 'Affected source files') {
+    $section = [regex]::Match($planText, "(?msi)^###\s+$heading\s*\r?\n(.*?)(?=^###\s|\z)")
+    foreach ($row in [regex]::Matches($section.Groups[1].Value, '(?m)^\|\s*`([^`]+)`\s*\|')) {
+        $row.Groups[1].Value.Trim().Replace('\', '/')
+    }
+})
+if ($declared.Count -eq 0) { $escapes.Add("rule 1: no files found in the plan's affected-file tables") }
+foreach ($file in @($changed | Where-Object { $declared -notcontains $_ })) {
+    $escapes.Add("rule 1: $file is not declared in the plan")
+}
+
+# Rule 2: the public surface is unchanged, comparing the base and head of each changed file.
+$inScope = @($changed | Where-Object { $_ -match '^src/modules/.+\.(psm1|ps1|psd1)$' -or $_ -match '^config/[^/]+\.json$' })
+foreach ($file in $inScope) {
+    try {
+        $before = @(Get-PublicSurface -Path $file -Text (Get-FileAtRevision -Revision $mergeBase -Path $file))
+        $after = @(Get-PublicSurface -Path $file -Text (Get-FileAtRevision -Revision 'HEAD' -Path $file))
+        $removed = @($before | Where-Object { $after -cnotcontains $_ })
+        $added = @($after | Where-Object { $before -cnotcontains $_ })
+        if ($removed.Count + $added.Count -gt 0) {
+            $escapes.Add("rule 2: public surface of $file changed (removed: $($removed -join '; ') | added: $($added -join '; '))")
+        }
+    }
+    catch { $escapes.Add("rule 2: cannot compare $file ($($_.Exception.Message))") }
+}
+
+# Rule 3: flag a file whose edit is far larger than the others. This never blocks.
+$sizes = @(foreach ($entry in git diff --numstat --no-renames "$base...HEAD") {
+    $insertions, $deletions, $file = $entry -split "`t", 3
+    if ($file -ne 'CHANGELOG.md') {
+        [pscustomobject]@{ Path = $file; Lines = [int]($insertions -replace '^-$', '0') + [int]($deletions -replace '^-$', '0') }
+    }
+})
+if ($sizes.Count -ge 3) {
+    $ordered = @($sizes.Lines | Sort-Object)
+    $middle = [int][math]::Floor($ordered.Count / 2)
+    $median = if ($ordered.Count % 2) { $ordered[$middle] } else { ($ordered[$middle - 1] + $ordered[$middle]) / 2 }
+    foreach ($size in @($sizes | Where-Object { $_.Lines -ge 3 * $median -and $_.Lines -ge $median + 10 })) {
+        $outliers.Add("$($size.Path): $($size.Lines) changed lines, median $median")
+    }
+}
+
+foreach ($escape in $escapes) { "ESCAPE $escape" }
+foreach ($outlier in $outliers) { "OUTLIER $outlier" }
+"GUARD: $(if ($escapes.Count -gt 0) { 'ESCAPE' } else { 'PASS' })"
+```
+
+Read its output:
+
+- `ESCAPE rule 1` or `ESCAPE rule 2`: a changed file the plan does not declare, or a public
+  surface change (a file the guard could not compare counts as one). Do not open the PR.
+  Follow Confirming an escape in the criteria file, and run the escape procedure with
+  `$stage = 'implement-issue Step 9a'` and a `$trigger` holding the guard's lines and the
+  user's view, only when the user agrees.
+- `OUTLIER` (rule 3): not a trigger. Show it in the review below; the user decides.
+- `GUARD: PASS`: continue with the review below.
+
+The guard cross-checks the plan-time evidence; it is not proof. It does not read class
+definitions such as `runbook.classes.ps1`, so those rest on the plan-time check and review.
+
 > ⛔ Review the plan doc DoD and all implementation changes. If **anything** does not
 > match expectations, **stop immediately**, surface the discrepancy, and wait for an
 > explicit decision before proceeding.
@@ -384,6 +526,11 @@ tools/Invoke-Pester.ps1 src/tests/
 ```
 
 **If any tests fail — STOP.** Fix them, push, then open the PR.
+
+For an issue carrying `lifecycle:fast-track`, do not fix and retry. Follow Confirming an
+escape in `.github/FAST_TRACK_CRITERIA.md`, and run the escape procedure with
+`$stage = 'implement-issue Step 9b Gate 1'` and a `$trigger` holding the failing test and
+the user's view, only when the user agrees.
 
 Use `github-pull-request_create_pull_request` targeting `<release-branch>`. The PR
 body must include: short summary, `Closes #N`, changes table, key design decisions,
