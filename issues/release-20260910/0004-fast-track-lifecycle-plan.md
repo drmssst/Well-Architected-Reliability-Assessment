@@ -448,12 +448,12 @@ testbed artifact applies because no module code changes.
 - [x] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
 - [x] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
 - [x] Manual checks V1 to V5 run
-- [ ] The V1 to V5 commands and output recorded in the pull request body
+- [x] The V1 to V5 commands and output recorded in the pull request body
 - [x] Scratch worktrees, branches, repositories and files from V1 to V3 removed, and
   the V2 throwaway issue closed with its board item removed
 - [x] CHANGELOG entry added with correct classification
 - [x] All modified Markdown files pass lint
-- [ ] PR opened targeting the release branch
+- [x] PR opened targeting the release branch
 
 ## Reflection
 
