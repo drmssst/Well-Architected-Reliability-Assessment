@@ -20,8 +20,10 @@ by the WARA module changes, and no GH Project status option is added or changed.
 
 - **Entry (B2).** `investigate-issue` evaluates the shared eligibility checklist
   (investigation B1, six conditions) in a new scan 1 that runs before its worktree
-  step. When the findings suggest an item qualifies, the investigator records the
-  same checklist as a Phase D entry placed before the sizing estimate, and
+  step. Because the author may not know an issue is trivial, scan 1 also gives an
+  XS likelihood and can flag provisionally (D2.12). When the findings suggest an
+  item qualifies, the investigator records the same checklist as a Phase D entry
+  placed before the sizing estimate, and
   `approve-ready-for-plan` carries the decision inside its existing quality
   confirmation, so it adds no gate. Both entries end the same way: the issue
   carries `lifecycle:fast-track` and sits at `status:plan`. Every scan, flagged or
@@ -32,7 +34,9 @@ by the WARA module changes, and no GH Project status option is added or changed.
 - **Guard and escape (B6, B8, B9).** `implement-issue` checks the diff and the
   test results against the plan before the pull request is opened. Any failed
   trigger runs one escape procedure, defined once in the criteria file, that
-  returns the item to the earliest normal stage whose artifact is missing.
+  returns the item to the earliest normal stage whose artifact is missing. Where a
+  person is working with the skill, the escape is proposed and runs only when the
+  person agrees (D2.13).
 - **Unchanged (B5).** Every release-side control (release-branch pull request,
   doc-content gate, pre-merge full Pester run, human merge confirmation, closing
   transition) and the changelog and version-classification requirements.
@@ -50,15 +54,20 @@ raised after this issue merges.
   `approve-ready-for-implement` and `implement-issue` read keep working unchanged.
 - A short `### Fast-track check` section comes first and re-answers the six
   checklist conditions with plan-level evidence. A failed answer stops `plan-issue`
-  before the rest is written and runs the escape procedure.
+  before the rest is written; the skill raises it with the user and runs the escape
+  procedure only if they agree (D2.13). The check answers `Yes` or `No`, so a row
+  that scan 1 left `Likely` must now be evidenced (D2.12).
 - Content is terse: Phase A is one short paragraph; each affected-file row names
-  one file (no globs) and states its uniform edit; version impact is `patch` or
+  one file (no globs) and states its uniform edit, with any changing test file
+  listed under Affected source files so the Step 9a guard declares it; version
+  impact is `patch` or
   `minor`; testing requirements may be an explicit "no new or modified tests" with
   the reason; the sizing section is the estimate line plus one sentence; the
   Definition of done keeps its standard items.
 - One pass, one lint run, one review gate: the user reviews the whole document once
   and "go ahead" commits it and stamps `awaiting-approval`. If the final estimate
-  is not `XS`, `plan-issue` runs the escape procedure instead of committing.
+  is not `XS`, `plan-issue` raises it with the user and runs the escape procedure
+  instead of committing only if they agree (D2.13).
 
 #### Guard rules (B9, exact rules)
 
@@ -79,7 +88,8 @@ of `implement-issue`, before the pull request is opened:
    at least three times the median and at least ten lines above it. The user
    decides at the existing Step 9a pause.
 4. **Tests.** Any failing test in the runs the skill already has (Step 4, and
-   Gate 1 after the merge in Step 9b) triggers the escape instead of fix-and-retry.
+   Gate 1 after the merge in Step 9b) triggers an escape proposal instead of
+   fix-and-retry (D2.13).
 
 The guard cross-checks the plan-time evidence; it is not proof. For example, it
 does not read the class definitions in `runbook.classes.ps1`, which `runbook.psd1`
@@ -89,10 +99,11 @@ loads through `ScriptsToProcess`, so those rest on the plan-time check and revie
 
 - **D2.1 Compact plan profile:** option (a), above.
 - **D2.2 Scan evidence comment:** one template. Heading `## Fast-track scan`; fields
-  Context (scan 1 or post-investigation decision), Result (`FLAGGED` or
-  `NOT FLAGGED`), a table of the six conditions in the B1 order (Condition, Met,
-  Evidence), Failing conditions, and Confirmed by. The Phase D entry and the plan's
-  fast-track check reuse the same condition rows. Defined once in the criteria file.
+  Context (scan 1 or post-investigation decision), Result (`FLAGGED`,
+  `FLAGGED (provisional)` or `NOT FLAGGED`), XS likelihood (scan 1 only), a table of
+  the six conditions in the B1 order (Condition, Met, Evidence), Failing conditions,
+  and Confirmed by. The Phase D entry and the plan's fast-track check reuse the same
+  condition rows. Defined once in the criteria file.
 - **D2.3 Escape marker:** option (a), label `lifecycle:fast-track-escaped`, added
   only when the item returns to `status:investigate`, the one place scan 1 runs.
   Scan 1 skips an item that carries it or already has a `## Fast-track scan`
@@ -135,6 +146,24 @@ loads through `ScriptsToProcess`, so those rest on the plan-time check and revie
   1 file and about 6 lines, and 77% change at most 30 lines, per C11) is guidance,
   not a cap. Defined in the criteria file, with one-line pointers from the Phase D
   sizing steps of `investigate-issue` and `plan-issue`.
+- **D2.12 Provisional flag at scan 1 (added during implementation):** the author of
+  an issue may not know it is trivial, so scan 1 cannot rely on the issue text
+  alone. Scan 1 records an XS likelihood (High, Medium or Low) and may answer a row
+  `Likely` (not yet evidenced, nothing seen against it; never row 2, whose type
+  label is known). With no `No` row and at least one `Likely` row, the result is
+  `FLAGGED (provisional)` after the user confirms. The compact plan's check, the
+  first full read of the code, must then answer all six rows `Yes`, or the item
+  escapes. The post-investigation decision and the plan's check answer `Yes` or
+  `No` only. The numbers favour it: a correct flag at scan 1 saves 9 gates and a
+  wrong one wastes about 3.
+- **D2.13 Confirming an escape (added during implementation):** a trigger is a
+  proposal, because the skill that finds it can be wrong. `plan-issue` and
+  `implement-issue` (a failed test or guard rule) stop, show the trigger with its
+  evidence, recommend an escape and ask what the person knows; information from the
+  person answers the trigger, and agreement runs the procedure.
+  `approve-ready-for-implement` escapes on its own, because the approver is already
+  reviewing the plan. Wherever this plan says `plan-issue` or `implement-issue`
+  "runs the escape procedure", read it as proposes it and runs it on agreement.
 
 #### Findings from the context survey that refine the investigation
 
@@ -288,56 +317,58 @@ and the release controls end to end.
 
 ### Acceptance criteria
 
-- [ ] D1. `.github/FAST_TRACK_CRITERIA.md` states the six eligibility conditions,
+- [x] D1. `.github/FAST_TRACK_CRITERIA.md` states the six eligibility conditions,
       with the public-surface condition covering function names and parameter
       declarations in `.psm1` and `.ps1` files under `src/modules`,
       `FunctionsToExport` in `.psd1` files and `config/*.json` key paths. It
       defines `XS` as implementation an experienced contributor completes and
       verifies in about an hour, with the repository history as a non-binding note.
-- [ ] D2. The criteria file defines the `## Fast-track scan` and
+- [x] D2. The criteria file defines the `## Fast-track scan` and
       `## Fast-track escape` comment templates (fields as defined in Phase A), one
       escape procedure (triggers, target-state rule, label and board transitions,
       escape comment, plan rename to `<N-padded>-<slug>-plan-fast-track.md`), the
       two label definitions, and the calibration signals with the review cadence.
-- [ ] D3. `lifecycle:fast-track` and `lifecycle:fast-track-escaped` exist on the
+- [x] D3. `lifecycle:fast-track` and `lifecycle:fast-track-escaped` exist on the
       repository with color `c5def5` and the descriptions defined in Phase A (V4).
-- [ ] D4. `investigate-issue` runs scan 1 before Step 0, so no investigate worktree
+- [x] D4. `investigate-issue` runs scan 1 before Step 0, so no investigate worktree
       is created for a flagged item. It skips an item that carries
       `lifecycle:fast-track-escaped` or already has a `## Fast-track scan` comment.
       On confirmation it posts the scan comment, adds `lifecycle:fast-track`, moves
       label and board from `status:investigate` to `status:plan` and stops;
       otherwise it posts a not-flagged scan comment listing the failing conditions
-      and continues into Step 0.
-- [ ] D5. `investigate-issue` Phase D has a fast-track assessment entry before the
+      and continues into Step 0. It also records an XS likelihood and can flag
+      provisionally (D2.12).
+- [x] D5. `investigate-issue` Phase D has a fast-track assessment entry before the
       sizing estimate, and its Step 3 survey reads earlier scan and escape
       comments and any `-plan-fast-track.md` as prior art. `approve-ready-for-plan`
       folds the fast-track decision into its existing quality confirmation, adds
       `lifecycle:fast-track` in the same `gh issue edit` that moves
       `status:investigating` to `status:plan` when the answer is yes, and posts a
       `## Fast-track scan` comment either way.
-- [ ] D6. For an issue carrying `lifecycle:fast-track`, `plan-issue` writes a
+- [x] D6. For an issue carrying `lifecycle:fast-track`, `plan-issue` writes a
       compact plan at the normal plan path: `### Fast-track check` first, the same
       headings as a full plan, one pass, one lint run and one review gate. With no
       investigation document it drafts from the issue body and comments, including
       the scan comment, and its Step 3 survey reads scan and escape comments and
       any `-plan-fast-track.md` as prior art. A failed check answer, or a final
-      estimate other than `XS`, runs the escape procedure instead of committing.
-- [ ] D7. For an issue carrying `lifecycle:fast-track`, `approve-ready-for-implement`
+      estimate other than `XS`, is raised with the user and, only if they agree, runs
+      the escape procedure instead of committing (D2.13).
+- [x] D7. For an issue carrying `lifecycle:fast-track`, `approve-ready-for-implement`
       verifies the plan's `### Fast-track check`, the `XS` estimate and one named
       file per row (no globs) in the affected-file tables, and runs the escape
       procedure instead of advancing on a failure. It keeps the label on the issue
       through Step 4.
-- [ ] D8. The `implement-issue` Step 9a guard runs only for an issue carrying
+- [x] D8. The `implement-issue` Step 9a guard runs only for an issue carrying
       `lifecycle:fast-track`, takes no GitHub action, and its outcomes match V1:
       rule 1 reports an undeclared file; rule 2 reports a public-surface change in
       a `.psm1`, `.ps1`, `.psd1` or `config/*.json` file (and fails closed on an
       unparsable file) while passing body-only, `Description`-only and JSON
       value-only changes; rule 3 flags an outlier only with three or more declared
       files.
-- [ ] D9. For an issue carrying `lifecycle:fast-track`, `implement-issue` runs the
-      escape procedure instead of fix-and-retry when a test fails at Step 4 or at
-      the Gate 1 run in Step 9b.
-- [ ] D10. The escape procedure's outcomes match V2: target `status:plan` when an
+- [x] D9. For an issue carrying `lifecycle:fast-track`, `implement-issue` proposes
+      the escape procedure instead of fix-and-retry when a test fails at Step 4 or at
+      the Gate 1 run in Step 9b, and runs it only if the user agrees (D2.13).
+- [x] D10. The escape procedure's outcomes match V2: target `status:plan` when an
       investigation document exists and `status:investigate` otherwise;
       `lifecycle:fast-track` and the current status label removed, plus
       `awaiting-approval` if present; `lifecycle:fast-track-escaped` added only for
@@ -345,25 +376,25 @@ and the release controls end to end.
       comment; and the compact plan, committed or draft, moved to
       `<N-padded>-<slug>-plan-fast-track.md` so the `<N-padded>-*-plan.md` lookups
       no longer return it.
-- [ ] D11. The compact form works with the existing parse points (V3): the sizing
+- [x] D11. The compact form works with the existing parse points (V3): the sizing
       regex from `approve-ready-for-implement` returns `XS` for a sample compact
       plan, the guard's table parser extracts one path per row from it and eight
       paths from this plan's Affected documents table, and the headings the
       downstream skills search for are present.
-- [ ] D12. The normal route keeps all of its existing steps and gates: for an issue
+- [x] D12. The normal route keeps all of its existing steps and gates: for an issue
       that is not flagged, the five skills remove or reorder no existing step or
       STOP, and a recount of the STOP and confirm prompts gives 13
       pre-implementation gates on the normal route, 4 when flagged at the start and
       9 when flagged after investigation.
-- [ ] D13. `README.md` documents the fast-track route and points to
+- [x] D13. `README.md` documents the fast-track route and points to
       `.github/FAST_TRACK_CRITERIA.md`, its lifecycle section names
       `.github/skills/*/SKILL.md` as the source of truth, and no `.github/prompts`
       reference remains in it.
-- [ ] D14. Names agree everywhere (V5): the label names, the `## Fast-track scan`
+- [x] D14. Names agree everywhere (V5): the label names, the `## Fast-track scan`
       and `## Fast-track escape` headings, the plan rename pattern and the criteria
       file path match the criteria file's definitions in every skill and in the
       README, and every pointer to the criteria file resolves.
-- [ ] D15. The pull request changes only the eight files in the Affected documents
+- [x] D15. The pull request changes only the eight files in the Affected documents
       table: no `src/modules/**`, `config/**`, `tools/**`, `raise-issue`,
       `groom-backlog`, `next-issues` or `approve-ready-for-release` change.
 
@@ -411,15 +442,15 @@ No Pester tests are written for this issue, so the test items below are met by V
 V5 passing and the full suite staying green. The manual smoke test is V1 to V5; no
 testbed artifact applies because no module code changes.
 
-- [ ] All acceptance criteria verified
-- [ ] All affected documents updated
-- [ ] All tests in Testing Requirements written and passing
-- [ ] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
-- [ ] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
-- [ ] Manual checks V1 to V5 run, with their commands and output recorded in the
-  pull request body
-- [ ] Scratch worktrees, branches, repositories and files from V1 to V3 removed, and
+- [x] All acceptance criteria verified
+- [x] All affected documents updated
+- [x] All tests in Testing Requirements written and passing
+- [x] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
+- [x] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
+- [x] Manual checks V1 to V5 run
+- [ ] The V1 to V5 commands and output recorded in the pull request body
+- [x] Scratch worktrees, branches, repositories and files from V1 to V3 removed, and
   the V2 throwaway issue closed with its board item removed
-- [ ] CHANGELOG entry added with correct classification
-- [ ] All modified Markdown files pass lint
+- [x] CHANGELOG entry added with correct classification
+- [x] All modified Markdown files pass lint
 - [ ] PR opened targeting the release branch
