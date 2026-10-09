@@ -26,6 +26,7 @@ This repository holds scripts and automation built for the Well-Architected Reli
 - [Contribution Guide](docs/wara/contribution-guide.md)
 - [Modules](#modules)
 - [Issue Lifecycle Workflow](#issue-lifecycle-workflow)
+  - [Fast-Track Route](#fast-track-route)
 
 ## Getting Started
 
@@ -266,8 +267,39 @@ issue label that gates the transition to the next stage.
 Investigation and plan documents live on the `docs/main` branch, checked out at
 `C:\wt\wara\docs`.
 
-Each stage transition, and the prompts that drive it, are documented in
-`.github/prompts/*.prompt.md` — that directory is the source of truth for the exact
+Each stage transition, and the skills that drive it, are documented in
+`.github/skills/*/SKILL.md` — those files are the source of truth for the exact
 steps, gates, and commands used at each stage (`raise-issue`, `groom-backlog`,
 `next-issues`, `investigate-issue`, `plan-issue`, `implement-issue`, and the
-`approve-ready-for-*` transition prompts).
+`approve-ready-for-*` transition skills).
+
+### Fast-Track Route
+
+Low-risk `XS` papercuts can take a second, governed route: a compact plan and
+proportionate approvals, and no investigation when the issue is flagged at the start. The
+eligibility checklist, the comment templates, the escape procedure and the label
+definitions are defined once in
+[.github/FAST_TRACK_CRITERIA.md](.github/FAST_TRACK_CRITERIA.md). The route adds a
+`lifecycle:fast-track` marker label alongside the `status:*` labels; it adds no new status
+or board option.
+
+- **Entry.** A flagged issue carries `lifecycle:fast-track` and sits at `status:plan`. It is
+  flagged at one of two points: scan 1 at the start of `investigate-issue`, before any
+  investigation, or the post-investigation decision in `approve-ready-for-plan`. Scan 1
+  can also flag provisionally when its XS likelihood is High but some checks cannot be
+  evidenced yet; the compact plan then verifies them. Every scan is recorded as a
+  `## Fast-track scan` issue comment.
+- **Compact plan.** `plan-issue` writes it in one pass behind one review gate, starting
+  with a `### Fast-track check`. For an issue flagged at the start,
+  `approve-ready-for-implement` is the only approval before implementation.
+- **Guard.** Before the pull request is opened, `implement-issue` checks the diff and the
+  test results against the plan.
+- **Escape.** When a check or test fails, the skill shows you the evidence and escapes
+  only if you agree. `approve-ready-for-implement`, where you are already reviewing the
+  plan, escapes on its own. An escape returns the issue to the earliest normal stage whose
+  artifact is missing (`status:investigate` when no investigation document exists,
+  otherwise `status:plan`), adds `lifecycle:fast-track-escaped` when it returns to
+  investigate, and records a `## Fast-track escape` comment. Nothing is deleted.
+
+Every release-side control is unchanged: the release-branch pull request, the full Pester
+run, human merge confirmation, and the changelog and version classification.
