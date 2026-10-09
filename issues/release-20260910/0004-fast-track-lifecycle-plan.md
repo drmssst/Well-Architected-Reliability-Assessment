@@ -454,3 +454,56 @@ testbed artifact applies because no module code changes.
 - [x] CHANGELOG entry added with correct classification
 - [x] All modified Markdown files pass lint
 - [ ] PR opened targeting the release branch
+
+## Reflection
+
+**Estimate:** `M`
+
+**Actual:** About right, at the upper end of `M` (8 files, 842 lines added): the guard
+and escape drivers needed no fixes, but three design changes made during implementation
+added work the estimate did not include.
+
+**Drivers that materialised:**
+
+- Commit 4, guard in `implement-issue` (High), and whether the parser comparison holds:
+  the largest code edit at 147 added lines, but the V1 dry run passed 22 of 22 scenarios
+  with no change to the guard, so there was no redesign or fix round.
+- Commit 1, criteria file (High), and whether the escape commands behave as written: at
+  373 lines it is the largest file and the one that absorbed the provisional flag and
+  confirm-before-escape; V2, on a scratch repository and then a throwaway issue, found no
+  defect in steps E1 to E4.
+- Commit 3, compact mode and verification (Medium), and whether the heading-based edits
+  accept the compact form: `plan-issue` gained 106 lines; V3 verified the parse points on
+  a sample compact plan, and the end-to-end run through `implement-issue` Steps 5 and 8
+  is left to the B10 follow-up after merge, as planned.
+- Commit 2, scan 1 and the plan-approval decision (Medium): scan 1 grew to five
+  sub-steps (1a to 1e) once the provisional flag landed there, making `investigate-issue`
+  a 116-line edit; the skip check recognised the escaped throwaway issue in V2 live.
+- V1 to V5 and label creation (Medium): as sized, with a scratch worktree, a scratch
+  repository, a throwaway issue with its board item, and cleanup; three bugs in the
+  scratch harnesses (CRLF in a regex, a multi-line comment check, a `-like` backtick
+  wildcard) cost iterations but changed no repository file, and the cleanup was
+  re-verified.
+- Cross-skill drift: V5 found 0 failures; the cost showed up instead as carrying each
+  review-driven change by hand into the criteria file, several skills, the README and
+  the plan.
+- Commit 5, README and CHANGELOG (Low): as sized, one route section, one pointer fix and
+  one `patch` entry, with no friction.
+
+**Surprises (not in sizing estimate):**
+
+- Two review-driven design changes after plan approval: the provisional flag at scan 1
+  (an XS likelihood opinion, with `Likely` rows) and confirm-before-escape (the planner
+  is involved before any escape, except in `approve-ready-for-implement`). Each touched
+  the criteria file, several skills, the README and the plan (D2.12, D2.13, and
+  amendments to D2.2, D4, D6 and D9). For workflow-policy issues, design review at
+  implementation time is worth sizing as a standing driver.
+- Guard rule 1 and tests, found while writing the guard: a fast-track fix that adds a
+  test would trip rule 1, because the guard takes its scope only from the plan's two
+  tables. Compact plans now list changing test files under Affected source files, a
+  small change to the already-accepted `plan-issue` edit.
+- The delegated Pester run returned no usable output, so the suite was run directly
+  (115 passed, 0 failed).
+
+**Revised size verdict:** Same size (`M`): the High-weight code drivers needed no fixes,
+and the review-driven changes added effort that stayed within the size.
