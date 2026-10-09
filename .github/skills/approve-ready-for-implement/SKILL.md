@@ -66,6 +66,21 @@ Read the plan doc and verify all five phases are present and substantive:
 - **Acceptance criteria** — at least one checkable condition
 - **Definition of done** — standard checklist present and complete
 
+**Fast-track verification.** When the Step 1 labels include `lifecycle:fast-track`, the plan
+is a compact plan. Its terse form satisfies the section checks above, so do not call it
+thin for being short. Also verify, using `.github/FAST_TRACK_CRITERIA.md`:
+
+- The plan has a `### Fast-track check` section whose six rows are all `Yes`, each with
+  specific evidence.
+- The `**Estimate:**` line is `XS`.
+- Every row of the Affected documents and Affected source files tables names exactly one
+  file: no globs, no directory rows, no several paths in one row.
+
+If any of these fails, do not advance and do not ask for confirmation. Tell the user which
+check failed and why, run the escape procedure in the criteria file with
+`$stage = 'approve-ready-for-implement Step 2'` and the failed check as `$trigger`, and
+stop.
+
 Present a one-paragraph quality summary. If any section is missing or thin, describe the
 gap and ask the user how to proceed.
 
@@ -88,6 +103,9 @@ Confirm with the user if the derived milestone name looks unexpected.
 ---
 
 ## Step 4 — Advance GH labels, board, and milestone
+
+Leave `lifecycle:fast-track` in place: `implement-issue` runs its guard only for issues
+that carry it.
 
 ```powershell
 $c = & tools/Get-GhProjectConstants.ps1

@@ -1,6 +1,6 @@
 ---
 name: plan-issue
-description: Writes a committed, approved implementation plan for a status:plan issue. Creates a plan doc on the docs/main branch with phases A–E (scope, document impact, testing, acceptance criteria, definition of done). No PR is opened — plan docs go directly to docs/main. Approve-ready-for-implement advances the issue to status:implement.
+description: Writes a committed, approved implementation plan for a status:plan issue. Creates a plan doc on the docs/main branch with phases A–E (scope, document impact, testing, acceptance criteria, definition of done). An issue carrying lifecycle:fast-track gets a compact plan written in one pass behind one review gate (compact mode). No PR is opened — plan docs go directly to docs/main. Approve-ready-for-implement advances the issue to status:implement.
 disable-model-invocation: true
 argument-hint: "Issue number — e.g. 54"
 ---
@@ -16,7 +16,9 @@ labels` to confirm. If absent, stop — the issue is not ready to plan.
 docs/main and the user has explicitly approved it.
 
 **Staged document workflow:** Write one phase at a time. After each phase, stop and ask
-the user to review. Do not write the next phase until the user explicitly accepts.
+the user to review. Do not write the next phase until the user explicitly accepts. The one
+exception is an issue carrying `lifecycle:fast-track`, which is written in one pass (see
+Compact mode).
 
 ---
 
@@ -101,6 +103,13 @@ Run in parallel:
    `$issueDocDir\<N-padded>-<slug>-investigation.md`. If it does not exist, check
    for a legacy combined doc (e.g. `<N-padded>-<slug>-plan.md`).
 4. Read `CHANGELOG.md` top section to establish the current version line.
+5. Check whether the issue carries `lifecycle:fast-track`, which selects compact mode,
+   and read its comments, including any `## Fast-track scan` comment:
+
+   ```powershell
+   $issue = gh issue view <N> --json labels,comments | ConvertFrom-Json
+   $compact = $issue.labels.name -contains 'lifecycle:fast-track'
+   ```
 
 From the investigation doc extract:
 
@@ -108,7 +117,14 @@ From the investigation doc extract:
 - **Phase D decisions** deferred to planning (options and constraints)
 - **Any prerequisite issues**
 
+In compact mode with no investigation doc, extract the same three things from the issue
+body and comments instead, including the `## Fast-track scan` comment. If its Result is
+`FLAGGED (provisional)`, the rows it left `Likely` are the first the Fast-track check
+must verify.
+
 Present a 2–3 sentence summary and ask: **"Ready to write the implementation plan for #N?"**
+In compact mode, add to the summary that this is a fast-track issue and that you will
+write a compact plan in one pass behind one review gate.
 Do not proceed until the user confirms.
 
 ---
@@ -148,6 +164,13 @@ Run in parallel to ground the plan in the current codebase state:
    planning or investigation docs that reference in-scope functions or contracts. For
    each match, note whether this issue invalidates their assumptions. Flag them in
    Phase B.
+5. **Fast-track prior art** — read the `## Fast-track scan` and `## Fast-track escape`
+   comments and any abandoned compact plan, as prior art rather than conclusions:
+
+   ```powershell
+   gh issue view <N> --json comments --jq '.comments[].body | select(startswith("## Fast-track"))'
+   Get-ChildItem $issueDocDir -Filter "<N-padded>-*-plan-fast-track.md"
+   ```
 
 Do not narrate survey findings in chat — they belong in Phase A.
 
@@ -237,6 +260,85 @@ to be filled in.
 
 ---
 
+## Compact mode (`lifecycle:fast-track`)
+
+When the issue carries `lifecycle:fast-track`, skip Phases A to E and write a compact plan
+instead, in one pass behind one review gate. It lives at the same path, with the same
+header and the same headings as a full plan, so `approve-ready-for-implement` and
+`implement-issue` read it unchanged. Read `.github/FAST_TRACK_CRITERIA.md` first: it
+defines the Eligibility checklist, the provisional flag rules, the `XS` definition, the
+Escape procedure and how to confirm an escape with the user. Run the Phase pre-flight
+once, before creating the doc.
+
+**C1 — Fast-track check first.** Create the plan doc with the standard header, the
+`## Implementation plan` heading and a `### Fast-track check` section, and nothing else.
+Read the code the plan will change, which is the first full read for an item that skipped
+investigation, and answer the six conditions of the Eligibility checklist in a Condition,
+Met, Evidence table that uses the checklist's condition names, in its order. Answer each
+row `Yes` or `No` with plan-level evidence: the file paths, the edit, the signatures you
+compared. `Likely` is not allowed here, and a row you cannot evidence is `No`.
+
+If any row is `No`, stop writing and raise it with the user before anything changes. Show
+the failing rows with their evidence, recommend escaping and name the state the item would
+return to, and ask what the user knows that you may not.
+
+> ⛔ **STOP — do not escape, and do not write the rest of the plan, until the user answers.**
+
+Then follow Confirming an escape in the criteria file. If the user gives information that
+answers a row, re-answer it with them as the source and carry on with C2. If they agree
+the item is not a fast-track papercut, run the escape procedure with
+`$stage = 'plan-issue (fast-track check)'` and a `$trigger` holding the failing rows, their
+evidence and the user's view, report as its After an escape section describes, and stop.
+The procedure renames the draft, so it stays as prior art.
+
+**C2 — Write the rest in one pass.** Append the remaining sections without pausing, with
+the headings and order of the plan document structure above. Keep each section terse:
+
+- **Phase A:** one short paragraph.
+- **Phase B:** the docs scan and in-flight scan results, in a sentence or two.
+- **Affected documents** and **Affected source files:** one row per file. Each row names
+  exactly one file (no globs, no directory rows) and states its uniform edit. Affected
+  documents always includes `CHANGELOG.md`. List any test file that changes in Affected
+  source files too: the Step 9a guard in `implement-issue` takes its declared scope from
+  these two tables.
+- **Version impact:** `patch` or `minor`, with a one-sentence rationale. A `major` impact
+  is a public surface change, so row 4 of the check would already be `No`.
+- **Testing requirements:** may be an explicit "No new or modified tests" with the reason.
+- **Acceptance criteria:** verifiable conditions only, one per observable outcome.
+- **Sizing estimate:** headed as in Phase D of a full plan (`### D<N>. Sizing estimate`),
+  with the `**Estimate:** XS` line and one sentence. No driver table.
+- **Definition of done:** the standard checklist, unchanged.
+
+If the `**Estimate:**` you wrote is not `XS`, do not lint or present the doc yet. Raise it
+as in C1: say what the estimate is and why, recommend escaping, and ask what the user
+knows that you may not.
+
+> ⛔ **STOP — do not escape, and do not continue, until the user answers.**
+
+If they give information that brings the estimate to `XS`, revise the section with them as
+the source and carry on. If they agree the item is not `XS`, run the escape procedure with
+`$stage = 'plan-issue (sizing estimate)'` and a `$trigger` stating the estimate, the reason
+and the user's view, and stop.
+
+**C3 — One lint run.** Lint the doc once and fix every violation:
+
+```powershell
+tools/Invoke-MarkdownLint.ps1 'C:\wt\wara\docs\issues\<release-folder>\<N-padded>-<slug>-plan.md'
+```
+
+**C4 — One review gate.** Tell the user:
+> "Compact plan written. Please open `issues/<release-folder>/<file>` in the `issues`
+> workspace folder and review the whole document once. If everything looks good, say
+> **'go ahead'** — I'll commit the plan doc and stamp `awaiting-approval`."
+
+> ⛔ **STOP — do not commit or stamp until the user says "go ahead".**
+
+If the review changed the estimate to anything other than `XS`, do not commit yet: raise it
+as in C1, and run the escape procedure only if the user agrees. Otherwise continue at
+Step 4.
+
+---
+
 ## Phase A — Scope and approach
 
 Write the scope section: what the core change is, what it delivers, any open decisions
@@ -314,7 +416,8 @@ independently checkable, not a process gate.
 
 Also include a **Sizing estimate** sub-section as the final entry in Phase D (use the
 next sequential `D<N>` number after whatever other AC items Phase D contains). Use the
-T-shirt scale XS / S / M / L / XL. Structure:
+T-shirt scale XS / S / M / L / XL, with `XS` as defined in the XS definition section of
+`.github/FAST_TRACK_CRITERIA.md`. Structure:
 
 - One-line verdict: `**Estimate:** <size>`
 - A driver table (columns: Driver, Weight, Reasoning) with one row per significant
