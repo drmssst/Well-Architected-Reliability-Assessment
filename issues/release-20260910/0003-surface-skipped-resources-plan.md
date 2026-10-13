@@ -683,9 +683,9 @@ is raised with the `raise-issue` workflow and names issue 3 as its origin.
   request body
 - [x] Scratch files from V1 and V2 removed and the V4 and V5 edits reverted, so that
   `git status` shows only the planned files
-- [ ] `tools/Invoke-PsScriptAnalyzer.ps1` exits 0 on every modified PowerShell file
+- [x] `tools/Invoke-PsScriptAnalyzer.ps1` exits 0 on every modified PowerShell file
 - [x] CHANGELOG entry added with correct classification
-- [ ] All modified Markdown files pass lint
+- [x] All modified Markdown files pass lint
 - [x] The work is committed as `chore(#3)`, `feat(#3)`, `docs(#3)` and `fix(#3)`, in that
   order, each message following `.github/COMMIT_GUIDELINES.md`
 - [x] F1 raised as #11: Carry skipped resources into the analyzer and report outputs (`type:feat`)
@@ -702,3 +702,56 @@ is raised with the `raise-issue` workflow and names issue 3 as its origin.
 - [x] F10 raised as #20: Stop the collector aborting on an empty filter input (`type:fix`)
 - [x] F11 raised as #21: `tools/Invoke-Pester.ps1` exits 0 under `pwsh -File` when a test fails (`type:fix`)
 - [ ] PR opened targeting the release branch
+
+## Reflection
+
+**Estimate:** `M`
+
+**Actual:** Harder, by about one size (4 commits, 6 files, 717 lines added): the change
+itself matched `M`, but redefining "skipped" (D2.8) and grounding eleven follow-ups added
+a fourth commit and a second round of verification that the estimate did not include.
+
+**Drivers that materialised:**
+
+- Commit 2, source change in `wara.psm1` (High), and the silent failure modes: as
+  estimated, at 151 changed lines against about 150; the empty-list binding of the tag
+  filter, the array shape, the filter's reordering and a warning that disagrees with the
+  record each have a named test (T6, T7, T14 to T18).
+- Commit 2, tests in `wara.tests.ps1` (High), and "no error" assertions that can fail: as
+  estimated, plus one test, at 19 `It` blocks generating 22 tests and 9 collector runs
+  against 18, 21 and 8; the assertions use the `Stop` preference (T4), and V4 showed that
+  they can fail.
+- Commit 1, lint baseline (Medium), and whether it stays mechanical: it did, with 3 files
+  at 39 lines added and 14 removed and the suite unchanged at 115 passing.
+- Follow-up issues (Medium), and how much each needs beyond its basis: more than
+  estimated. There were eleven, not ten, and at least eight needed a scratch run before a
+  body could be written (live published data, a hermetic repro of the collector or an
+  isolation matrix). Each was raised by running the steps of the `raise-issue` workflow by
+  hand, because the skill is user-invoked.
+- Verification V1 to V4 (Medium), and whether V1 can run and agree: V1 ran and agreed, so
+  the analyzer needed no change. V2 ran twice, before and after D2.8, and V5 was added for
+  D2.8. V4 ran only before D2.8; its assertions are unchanged except for T4's record count.
+- Deferred design (Low): did not hold. D2.8 revised B1, an investigation decision that the
+  plan had carried forward as settled.
+- Commit 3, documentation (Low): as sized, bounded prose and one diagram edit; D2.8 later
+  changed the same wording in the help and in two pages, in commit 4.
+
+**Surprises (not in sizing estimate):**
+
+- B1's rule was wrong for types that have automated recommendations but no manual one to
+  validate (live: `virtualMachineScaleSets`). It surfaced while grounding F3, not in a
+  planned check. The fix, D2.8, cost a fourth commit (4 files, 69 lines added and 23
+  removed, one new test), a plan revision, four reviewed groups, a wording round because
+  "active" read as a passed check, re-runs of V2 and V3, and the new V5.
+- F10 proved wider than its row: the empty-list rejection sits in four scope helpers with
+  seven call sites in the collector, and `-Tags` turns a run that completes without it into
+  an abort.
+- F11 was not in the plan: `tools/Invoke-Pester.ps1` loses its exit code under
+  `pwsh -File`. Pester results in this issue were read from the summary lines, so none is
+  affected.
+- The correction that the collector's JSON is a complete deliverable, with the workbook
+  and report as optional consumers, changed the text of F1 and the framing of the other
+  follow-ups.
+
+**Revised size verdict:** `L`: D2.8 changed the contract, which the plan names as its
+trigger for upgrading to `L`, and the follow-up work was larger than its Medium weight.
