@@ -2,6 +2,7 @@
 # Start-WARACollector
 
 ## SYNOPSIS
+
 Starts the WARA Collector process.
 
 ## SYNTAX
@@ -31,6 +32,7 @@ Start-WARACollector [-SAP] [-AVD] [-AVS] [-HPC] [-AI_GPT_RAG] [-PassThru] [-Subs
 ```
 
 ## DESCRIPTION
+
 The Start-WARACollector function initiates the WARA Collector process, which collects and processes data based on the specified parameters.
 It supports multiple parameter sets, including Default, Specialized, and ConfigFileSet.
 
@@ -63,6 +65,7 @@ Start-WARACollector -ConfigFile "C:\path\to\config.txt" -SAP -AVD
 ## PARAMETERS
 
 ### -SAP
+
 Switch to enable SAP workload processing.
 
 ```yaml
@@ -78,6 +81,7 @@ Accept wildcard characters: False
 ```
 
 ### -AVD
+
 Switch to enable AVD workload processing.
 
 ```yaml
@@ -93,6 +97,7 @@ Accept wildcard characters: False
 ```
 
 ### -AVS
+
 Switch to enable AVS workload processing.
 
 ```yaml
@@ -108,6 +113,7 @@ Accept wildcard characters: False
 ```
 
 ### -HPC
+
 Switch to enable HPC workload processing.
 
 ```yaml
@@ -123,6 +129,7 @@ Accept wildcard characters: False
 ```
 
 ### -AI_GPT_RAG
+
 Switch to enable Artificial Intelligence (GPT-RAG) workload processing.
 
 ```yaml
@@ -138,6 +145,7 @@ Accept wildcard characters: False
 ```
 
 ### -SubscriptionIds
+
 Array of subscription IDs to include in the process.
 Validated using Test-WAFSubscriptionId.
 
@@ -154,6 +162,7 @@ Accept wildcard characters: False
 ```
 
 ### -ResourceGroups
+
 Array of resource groups to include in the process.
 Validated using Test-WAFResourceGroupId.
 
@@ -170,6 +179,7 @@ Accept wildcard characters: False
 ```
 
 ### -TenantID
+
 The tenant ID to use for the process.
 This parameter is mandatory and validated using Test-WAFIsGuid.
 
@@ -186,6 +196,7 @@ Accept wildcard characters: False
 ```
 
 ### -Tags
+
 Array of tags to include in the process.
 Validated using Test-WAFTagPattern.
 
@@ -202,6 +213,7 @@ Accept wildcard characters: False
 ```
 
 ### -AzureEnvironment
+
 Specifies the Azure environment to use.
 Default is 'AzureCloud'.
 Valid values are 'AzureCloud', 'AzureUSGovernment', 'AzureGermanCloud', and 'AzureChinaCloud'.
@@ -219,9 +231,10 @@ Accept wildcard characters: False
 ```
 
 ### -ConfigFile
+
 Path to the configuration file.
 This parameter is mandatory for the ConfigFileSet parameter set and validated using Test-Path.
-See config file example [here](configfile.example).
+See the [config file example](configfile.example).
 
 ```yaml
 Type: String
@@ -236,8 +249,9 @@ Accept wildcard characters: False
 ```
 
 ### -RecommendationDataUri
+
 URI for the recommendation data.
-Default is 'https://azure.github.io/WARA-Build/objects/recommendations.json'.
+Default is '<https://azure.github.io/WARA-Build/objects/recommendations.json>'.
 
 ```yaml
 Type: String
@@ -252,8 +266,9 @@ Accept wildcard characters: False
 ```
 
 ### -RecommendationResourceTypesUri
+
 URI for the recommendation resource types.
-Default is 'https://raw.githubusercontent.com/Azure/Azure-Proactive-Resiliency-Library-v2/refs/heads/main/tools/WARAinScopeResTypes.csv'.
+Default is '<https://raw.githubusercontent.com/Azure/Azure-Proactive-Resiliency-Library-v2/refs/heads/main/tools/WARAinScopeResTypes.csv>'.
 
 ```yaml
 Type: String
@@ -268,6 +283,7 @@ Accept wildcard characters: False
 ```
 
 ### -UseImplicitRunbookSelectors
+
 Switch to enable the use of implicit runbook selectors.
 
 ```yaml
@@ -283,6 +299,7 @@ Accept wildcard characters: False
 ```
 
 ### -RunbookFile
+
 Path to the runbook file.
 Validated using Test-Path.
 
@@ -299,6 +316,7 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
@@ -306,6 +324,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## OUTPUTS
 
 ## NOTES
+
 Author: Kyle Poineal
 Date: 12/11/2024
 

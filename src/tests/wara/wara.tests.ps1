@@ -10,31 +10,31 @@ Describe 'Start-WARACollector Parameter Sets' {
     }
     Context 'ConfigFile' {
         It 'Should proceed when used alone.' {
-            $result = Start-WARACollector -ConfigFile "$PSScriptRoot/../data/wara/test_configfiledata.txt"
+            $null = Start-WARACollector -ConfigFile "$PSScriptRoot/../data/wara/test_configfiledata.txt"
             Assert-MockCalled Start-WARACollector -Exactly 1 -Scope It
         }
     }
     Context 'ConfigFile + Specialized' {
         It 'Should proceed with ConfigFile + Specialized.' {
-            $result = Start-WARACollector -ConfigFile "$PSScriptRoot/../data/wara/test_configfiledata.txt" -SAP -AVS -AVD -HPC -AI_GPT_RAG -ORACLE
+            $null = Start-WARACollector -ConfigFile "$PSScriptRoot/../data/wara/test_configfiledata.txt" -SAP -AVS -AVD -HPC -AI_GPT_RAG -ORACLE
             Assert-MockCalled Start-WARACollector -Exactly 1 -Scope It
         }
     }
     Context 'TenantId + SubscriptionIds' {
         It 'Should proceed with TenantId + SubscriptionIds' {
-            $result = Start-WARACollector -TenantID $(New-Guid).Guid -SubscriptionIds '/subscriptions/11111111-1111-1111-111111111111'
+            $null = Start-WARACollector -TenantID $(New-Guid).Guid -SubscriptionIds '/subscriptions/11111111-1111-1111-111111111111'
             Assert-MockCalled Start-WARACollector -Exactly 1 -Scope It
         }
     }
     Context 'TenantId + SubscriptionIds + ResourceGroups' {
         It 'Should proceed with TenantId + SubscriptionIds + ResourceGroups' {
-            $result = Start-WARACollector -TenantID $(New-Guid).Guid -SubscriptionIds '/subscriptions/11111111-1111-1111-111111111111' -ResourceGroups 'RG1'
+            $null = Start-WARACollector -TenantID $(New-Guid).Guid -SubscriptionIds '/subscriptions/11111111-1111-1111-111111111111' -ResourceGroups 'RG1'
             Assert-MockCalled Start-WARACollector -Exactly 1 -Scope It
         }
     }
     Context 'TenantId + SubscriptionIds + ResourceGroups + Specialized' {
         It 'Should proceed with TenantId + SubscriptionIds + ResourceGroups + Specialized' {
-            $result = Start-WARACollector -TenantID $(New-Guid).Guid -SubscriptionIds '/subscriptions/11111111-1111-1111-111111111111' -ResourceGroups 'RG1' -SAP -AVS -AVD -HPC -AI_GPT_RAG -ORACLE
+            $null = Start-WARACollector -TenantID $(New-Guid).Guid -SubscriptionIds '/subscriptions/11111111-1111-1111-111111111111' -ResourceGroups 'RG1' -SAP -AVS -AVD -HPC -AI_GPT_RAG -ORACLE
             Assert-MockCalled Start-WARACollector -Exactly 1 -Scope It
         }
     }
@@ -98,7 +98,7 @@ Describe 'Start-WARACollector' {
 
             Mock Invoke-RestMethod { return $RecommendationResourceTypes_TestData } -ParameterFilter { $uri -eq 'https://raw.githubusercontent.com/Azure/Azure-Proactive-Resiliency-Library-v2/refs/heads/main/tools/WARAinScopeResTypes.csv' } -ModuleName 'wara'
 
-            Mock Get-WARAOtherRecommendations { return $null } -ModuleName 'wara'
+            Mock Get-WARAOtherRecommendation { return $null } -ModuleName 'wara'
 
             Mock Get-WAFAdvisorRecommendation {
 
@@ -295,7 +295,7 @@ Describe 'Build-SpecializedResourceObj' {
 
 }
 
-Describe 'Get-WARAOtherRecommendations' {
+Describe 'Get-WARAOtherRecommendation' {
     Context 'When given correct parameters' {
         It 'Should return the right stuff' {
             $advisorMetadata = Get-Content -Raw -LiteralPath "$PSScriptRoot/../data/wara/test_advisormetadata.json" | ConvertFrom-Json -Depth 10
@@ -305,7 +305,7 @@ Describe 'Get-WARAOtherRecommendations' {
                 RecommendationObject = $recommendationObject
                 AdvisorMetadata      = $advisorMetadata
             } {
-                $OtherRecommendations = Get-WARAOtherRecommendations -RecommendationObject $RecommendationObject -AdvisorMetadata $AdvisorMetadata
+                { Get-WARAOtherRecommendation -RecommendationObject $RecommendationObject -AdvisorMetadata $AdvisorMetadata } | Should -Not -Throw
             }
 
         }

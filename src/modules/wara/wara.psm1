@@ -73,6 +73,7 @@
     Date: 12/11/2024
 #>
 function Start-WARACollector {
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'SupportsShouldProcess would add -WhatIf, which would skip only the output-file write while the Azure queries still run.')]
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     param (
         [Parameter(ParameterSetName = 'Default')]
@@ -406,7 +407,7 @@ function Start-WARACollector {
     #Get Other Recommendations
     Write-Debug 'Getting Other Recommendations'
     Write-Progress -Activity 'WARA Collector' -Status 'Getting Other Recommendations' -PercentComplete 62 -Id 1
-    $OtherRecommendations = Get-WARAOtherRecommendations -RecommendationObject $RecommendationObject -AdvisorMetadata $AdvisorMetadata
+    $OtherRecommendations = Get-WARAOtherRecommendation -RecommendationObject $RecommendationObject -AdvisorMetadata $AdvisorMetadata
     Write-Debug "Count of Other Recommendations: $($OtherRecommendations.count)"
 
     #Get Advisor Recommendations
@@ -571,6 +572,7 @@ function Start-WARACollector {
 
 function Build-ImpactedResourceObj {
     [CmdletBinding()]
+    [OutputType([object[]])]
     param (
         [Parameter(Mandatory = $true)]
         [PSCustomObject] $ImpactedResources,
@@ -590,6 +592,7 @@ function Build-ImpactedResourceObj {
 
 function Build-ValidationResourceObj {
     [CmdletBinding()]
+    [OutputType([object[]])]
     param (
         [Parameter(Mandatory = $true)]
         [Hashtable] $ValidationResources,
@@ -609,6 +612,7 @@ function Build-ValidationResourceObj {
 
 function Build-ResourceTypeObj {
     [CmdletBinding()]
+    [OutputType([object[]])]
     param (
         [Parameter(Mandatory = $true)]
         [PSObject] $ResourceObj,
@@ -624,6 +628,7 @@ function Build-ResourceTypeObj {
 
 function Build-SpecializedResourceObj {
     [CmdletBinding()]
+    [OutputType([object[]])]
     param (
         [Parameter(Mandatory = $true)]
         [PSObject] $SpecializedResourceObj,
@@ -637,8 +642,9 @@ function Build-SpecializedResourceObj {
     return , $return
 }
 
-function Get-WARAOtherRecommendations {
+function Get-WARAOtherRecommendation {
     [CmdletBinding()]
+    [OutputType([object[]])]
     param(
         [Parameter(Mandatory = $true)]
         [PSObject] $RecommendationObject,
@@ -966,7 +972,7 @@ class validationResourceFactory {
     [object[]] createValidationResourceObjects() {
         $return = @()
 
-        $RecommendationResourceTypesWithoutAutomation = ($this.recommendationObject | group recommendationResourceType | where {$_.group.automationavailable -notcontains $false}).Name
+        $RecommendationResourceTypesWithoutAutomation = ($this.recommendationObject | Group-Object recommendationResourceType | Where-Object {$_.group.automationavailable -notcontains $false}).Name
 
         $return = foreach ($v in $this.validationResources.GetEnumerator()) {
 
