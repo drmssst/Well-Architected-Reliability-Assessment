@@ -5,6 +5,8 @@
 .DESCRIPTION
     The Start-WARACollector function initiates the WARA Collector process, which collects and processes data based on the specified parameters. It supports multiple parameter sets, including Default, Specialized, and ConfigFileSet.
 
+    A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no qualifying recommendation, receives no APRL verdict. The collector lists each such resource in the 'skippedResources' output (see OUTPUTS) and writes one warning per run that gives the resource and type counts and names the largest types. No error is raised for these resources, so -ErrorAction Stop, or a global Stop preference, does not end the run. To end the run at the warning, use -WarningAction Stop: the call then throws and returns no output.
+
 .PARAMETER SAP
     Switch to enable SAP workload processing.
 
@@ -67,6 +69,17 @@
 
 .EXAMPLE
     Start-WARACollector -ConfigFile "C:\path\to\config.txt" -SAP -AVD
+
+.OUTPUTS
+    The output object, which -PassThru returns and which is otherwise written to the JSON file, has a top-level 'skippedResources' key that lists the resources that received no APRL verdict.
+
+    The key is always present and is always an array: empty when no resource is skipped, never $null and never omitted.
+
+    Each entry has seven string properties: id, name, type, location, subscriptionId, resourceGroup and reason. The reason is a code. NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no qualifying recommendation for the resource.
+
+    Entries are ordered by type and then by id, using the ordinal, case-insensitive comparison OrdinalIgnoreCase. With -Tags, the key lists only the skipped resources that remain in scope after the tag filter.
+
+    A skipped resource has no row in 'impactedResources'. The key name, the property names, the reason code and the order are stable. Properties and codes can be added later, so a reader ignores the ones it does not know.
 
 .NOTES
     Author: Kyle Poineal
@@ -389,7 +402,8 @@ function Start-WARACollector {
     #Create validationResourceObj objects from the impactedResourceObj objects
     Write-Debug 'Creating validationResourceObj objects from the impactedResourceObj objects'
     Write-Progress -Activity 'WARA Collector' -Status 'Creating Validation Resource Objects' -PercentComplete 53 -Id 1
-    $validationResourceObj = Build-ValidationResourceObj -ValidationResources $validationResources -RecommendationObject $RecommendationObject -TypesNotInAPRLOrAdvisor $TypesNotInAPRLOrAdvisor
+    $skippedResources = [System.Collections.Generic.List[skippedResourceObj]]::new()
+    $validationResourceObj = Build-ValidationResourceObj -ValidationResources $validationResources -RecommendationObject $RecommendationObject -TypesNotInAPRLOrAdvisor $TypesNotInAPRLOrAdvisor -SkippedResources $skippedResources
     Write-Debug "Count of validationResourceObj objects: $($validationResourceObj.count)"
 
     #Combine impactedResourceObj and validationResourceObj objects
@@ -463,7 +477,21 @@ function Start-WARACollector {
         Write-Progress -Activity 'WARA Collector' -Status 'Filtering Advisor Recommendations' -PercentComplete 73 -Id 1
         $advisorResourceObj = Get-WAFFilteredResourceList -UnfilteredResources $advisorResourceObj -ResourceGroupFilters $Filter_TaggedResourceGroupIds -ResourceFilters $Filter_TaggedResourceIds
         Write-Debug "Count of tag filtered Advisor Recommendations: $($advisorResourceObj.count)"
+
+        #Filter skippedResources by tagged resource group and resource scope, only when it has entries because Get-WAFFilteredResourceList rejects an empty list
+        if ($skippedResources.Count -gt 0) {
+            Write-Debug 'Filtering skippedResources by tagged resource group and resource scope'
+            Write-Progress -Activity 'WARA Collector' -Status 'Filtering Skipped Resources' -PercentComplete 73 -Id 1
+            $skippedResources = Get-WAFFilteredResourceList -UnfilteredResources $skippedResources -ResourceGroupFilters $Filter_TaggedResourceGroupIds -ResourceFilters $Filter_TaggedResourceIds
+            Write-Debug "Count of tag filtered skippedResources: $($skippedResources.count)"
+        }
     }
+
+    #Sort skippedResources and write the one warning about them, after the tag filter so the warning and the output hold the same list
+    Write-Debug 'Building skippedResources'
+    Write-Progress -Activity 'WARA Collector' -Status 'Building Skipped Resources' -PercentComplete 73 -Id 1
+    $skippedResources = Build-SkippedResourceObj -SkippedResources $skippedResources
+    Write-Debug "Count of skippedResources: $($skippedResources.count)"
 
     #Build Specialized Resource Object if Specialized Workloads are selected but not present in the impactedResourceObj.
     #Some of the specialized workloads have queries that run. If this is the case then we need to check if the impactedResourceObj contains these resource types and if not add them to the impactedResourceObj.
@@ -546,6 +574,7 @@ function Start-WARACollector {
     $outputJson = [PSCustomObject]@{
         scriptDetails       = $scriptDetails
         impactedResources   = $impactedResourceObj
+        skippedResources    = $skippedResources
         resourceType        = $resourceTypeObj
         advisory            = $advisorResourceObj
         outages             = $outageResourceObj
@@ -601,13 +630,48 @@ function Build-ValidationResourceObj {
         [PSObject] $RecommendationObject,
 
         [Parameter(Mandatory = $true)]
-        [PSObject] $TypesNotInAPRLOrAdvisor
+        [PSObject] $TypesNotInAPRLOrAdvisor,
+
+        # Not mandatory: a mandatory collection parameter rejects an empty list.
+        [Parameter(Mandatory = $false)]
+        [System.Collections.Generic.List[skippedResourceObj]] $SkippedResources = [System.Collections.Generic.List[skippedResourceObj]]::new()
     )
 
     $validatorObj = [validationResourceFactory]::new($RecommendationObject, $validationResources, $TypesNotInAPRLOrAdvisor)
+    $validatorObj.SkippedResources = $SkippedResources
     $r = $validatorObj.createValidationResourceObjects()
 
     return , $r
+}
+
+function Build-SkippedResourceObj {
+    [CmdletBinding()]
+    [OutputType([object[]])]
+    param (
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]] $SkippedResources
+    )
+
+    # Ordinal comparison keeps the order the same on every host culture
+    $comparer = [System.StringComparer]::OrdinalIgnoreCase
+    $ordered = [System.Linq.Enumerable]::OrderBy($SkippedResources, [Func[object, string]] { param($record) $record.type }, $comparer)
+    $ordered = [System.Linq.Enumerable]::ThenBy($ordered, [Func[object, string]] { param($record) $record.id }, $comparer)
+    $sorted = [System.Linq.Enumerable]::ToArray($ordered)
+
+    if ($sorted.Count -gt 0) {
+        # The groups arrive in type order and the sort is stable, so tied types list in type order
+        $types = @($sorted | Group-Object -Property type)
+        $listed = @($types | Sort-Object -Property Count -Descending -Stable | Select-Object -First 10)
+        $typeText = ($listed | ForEach-Object { "$($_.Name) ($($_.Count))" }) -join ', '
+        if ($types.Count -gt $listed.Count) {
+            $typeText += ", and $($types.Count - $listed.Count) more types"
+        }
+
+        Write-Warning ("{0} resource(s) of {1} type(s) received no APRL verdict: no qualifying recommendation was found, although WARAinScopeResTypes.csv flags the type as covered. The resource IDs are in 'skippedResources'. Types (resources): {2}." -f $sorted.Count, $types.Count, $typeText)
+    }
+
+    return , $sorted
 }
 
 function Build-ResourceTypeObj {
@@ -849,6 +913,56 @@ class aprlResourceObj {
 
 <#
 .CLASS
+    skippedResourceObj
+
+.SYNOPSIS
+    Represents a resource that received no APRL verdict.
+
+.DESCRIPTION
+    The `skippedResourceObj` class records a resource that validation could not give an APRL verdict: `WARAinScopeResTypes.csv` flags its type as covered, but `recommendations.json` has no qualifying recommendation for it. Such a resource is neither compliant nor non-compliant, and it has no row in `impactedResources`.
+
+.PROPERTY id
+    The ID of the resource.
+
+.PROPERTY name
+    The name of the resource.
+
+.PROPERTY type
+    The type of the resource.
+
+.PROPERTY location
+    The location of the resource.
+
+.PROPERTY subscriptionId
+    The subscription ID of the resource.
+
+.PROPERTY resourceGroup
+    The resource group of the resource.
+
+.PROPERTY reason
+    The reason code. `NoMatchingRecommendation` is the only code today.
+
+.EXAMPLE
+    $skipped = [skippedResourceObj]::new()
+    $skipped.id = "/subscriptions/12345/resourceGroups/myRG/providers/Microsoft.Network/vpnSites/mySite"
+    $skipped.reason = "NoMatchingRecommendation"
+
+.NOTES
+    Author: Shaun Tinline
+    Date: 2026-10-12
+#>
+class skippedResourceObj {
+    [string] $id
+    [string] $name
+    [string] $type
+    [string] $location
+    [string] $subscriptionId
+    [string] $resourceGroup
+    [string] $reason
+}
+
+<#
+.CLASS
     impactedResourceFactory
 
 .SYNOPSIS
@@ -936,13 +1050,16 @@ class impactedResourceFactory {
 .PROPERTY TypesNotInAPRLOrAdvisor
     Resource types that we want to create a recommendation for but do not have a recommendation for.
 
+.PROPERTY SkippedResources
+    Receives a `skippedResourceObj` for each resource that ends with no qualifying recommendation. Defaults to a new empty list; a caller that assigns its own list gets the records in place.
+
 .CONSTRUCTORS
     validationResourceFactory([PSObject]$recommendationObject, [hashtable]$validationResources, [PSObject]$TypesNotInAPRLOrAdvisor)
         Initializes a new instance of the `validationResourceFactory` class.
 
 .METHODS
     [object[]] createValidationResourceObjects()
-        Creates and returns an array of `aprlResourceObj` instances for validation purposes.
+        Creates and returns an array of `aprlResourceObj` instances for validation purposes. A resource with no qualifying recommendation gets no `aprlResourceObj`; it is recorded in `SkippedResources` instead.
 
     static [string] getValidationAction($query)
         Determines the validation action based on the query.
@@ -962,6 +1079,7 @@ class validationResourceFactory {
     [PSObject] $recommendationObject # The recommendation object
     [hashtable] $validationResources # The validation resources
     [PSObject] $TypesNotInAPRLOrAdvisor # Resource types that we want to create a recommendation for but do not have a recommendation for.
+    [System.Collections.Generic.List[skippedResourceObj]] $SkippedResources = [System.Collections.Generic.List[skippedResourceObj]]::new() # Resources that end with no qualifying recommendation; a caller may assign its own list
 
     validationResourceFactory([PSObject]$recommendationObject, [hashtable]$validationResources, [PSObject]$TypesNotInAPRLOrAdvisor) {
         $this.recommendationObject = $recommendationObject
@@ -1025,7 +1143,15 @@ class validationResourceFactory {
                 $r
             }
             else {
-                Write-Error "No recommendation found for $($impactedResource.type) with resource id $($impactedResource.id)"
+                $skipped = [skippedResourceObj]::new()
+                $skipped.id = $impactedResource.id
+                $skipped.name = $impactedResource.name
+                $skipped.type = $impactedResource.type
+                $skipped.location = $impactedResource.location
+                $skipped.subscriptionId = $impactedResource.subscriptionId
+                $skipped.resourceGroup = $impactedResource.resourceGroup
+                $skipped.reason = 'NoMatchingRecommendation'
+                $this.SkippedResources.Add($skipped)
             }
         }
 
