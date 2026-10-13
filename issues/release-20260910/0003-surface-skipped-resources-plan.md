@@ -679,7 +679,7 @@ is raised with the `raise-issue` workflow and names issue 3 as its origin.
   `src/tests/wara/wara.tests.ps1` reports 38 passed and the suite 137 passed, with no
   failures
 - [x] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
-- [ ] Manual checks V1 to V5 run, with their commands and output recorded in the pull
+- [x] Manual checks V1 to V5 run, with their commands and output recorded in the pull
   request body
 - [x] Scratch files from V1 and V2 removed and the V4 and V5 edits reverted, so that
   `git status` shows only the planned files
@@ -701,7 +701,7 @@ is raised with the `raise-issue` workflow and names issue 3 as its origin.
 - [x] F9 raised as #19: Document the full `Start-WARACollector` output shape (`type:docs`)
 - [x] F10 raised as #20: Stop the collector aborting on an empty filter input (`type:fix`)
 - [x] F11 raised as #21: `tools/Invoke-Pester.ps1` exits 0 under `pwsh -File` when a test fails (`type:fix`)
-- [ ] PR opened targeting the release branch
+- [x] PR opened targeting the release branch (#22)
 
 ## Reflection
 
