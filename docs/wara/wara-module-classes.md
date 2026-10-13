@@ -169,7 +169,7 @@ Represents a resource that received no APRL verdict.
 
 ### DESCRIPTION
 
-The `skippedResourceObj` class records a resource that validation could not give an APRL verdict: `WARAinScopeResTypes.csv` flags its type as covered, but `recommendations.json` has no qualifying recommendation for it. Such a resource is neither compliant nor non-compliant, and it has no row in `impactedResources`.
+The `skippedResourceObj` class records a resource that validation could not give an APRL verdict: `WARAinScopeResTypes.csv` flags its type as covered, but `recommendations.json` has no recommendation for its type, automated or manual. Such a resource is neither compliant nor non-compliant, and it has no row in `impactedResources`. A resource whose type has any recommendation is not listed, even when it gets no manual-validation row. A recommendation whose `recommendationMetadataState` is `Disabled` does not count.
 
 ### PROPERTIES
 
@@ -226,7 +226,7 @@ The `validationResourceFactory` class is responsible for creating instances of `
 - **recommendationObject**: The recommendation object.
 - **validationResources**: The validation resources.
 - **TypesNotInAPRLOrAdvisor**: Resource types that we want to create a recommendation for but do not have a recommendation for.
-- **SkippedResources**: Receives a `skippedResourceObj` for each resource that ends with no qualifying recommendation. Defaults to a new empty list; a caller that assigns its own list gets the records in place.
+- **SkippedResources**: Receives a `skippedResourceObj` for each resource whose type has no recommendation, automated or manual. Defaults to a new empty list; a caller that assigns its own list gets the records in place.
 
 ### CONSTRUCTORS
 
@@ -240,7 +240,7 @@ validationResourceFactory([PSObject]$recommendationObject, [hashtable]$validatio
 [object[]] createValidationResourceObjects()
 ```
 
-Creates and returns an array of `aprlResourceObj` instances for validation purposes based on the recommendation objects, validation resources, and types not in APRL or ADVISOR. A resource with no qualifying recommendation gets no `aprlResourceObj`; it is recorded in `SkippedResources` instead.
+Creates and returns an array of `aprlResourceObj` instances for validation purposes based on the recommendation objects, validation resources, and types not in APRL or ADVISOR. A resource whose type has no recommendation, automated or manual, gets no `aprlResourceObj`; it is recorded in `SkippedResources` instead. A resource whose type has a recommendation but none to validate manually gets neither.
 
 ```powershell
 static [string] getValidationAction($query)

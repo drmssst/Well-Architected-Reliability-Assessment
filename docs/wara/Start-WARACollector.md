@@ -36,7 +36,7 @@ Start-WARACollector [-SAP] [-AVD] [-AVS] [-HPC] [-AI_GPT_RAG] [-PassThru] [-Subs
 The Start-WARACollector function initiates the WARA Collector process, which collects and processes data based on the specified parameters.
 It supports multiple parameter sets, including Default, Specialized, and ConfigFileSet.
 
-A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no qualifying recommendation, receives no APRL verdict.
+A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no recommendation for the type, automated or manual, receives no APRL verdict.
 The collector lists each such resource in the 'skippedResources' output (see OUTPUTS) and writes one warning per run that gives the resource and type counts and names the largest types.
 No error is raised for these resources, so -ErrorAction Stop, or a global Stop preference, does not end the run.
 To end the run at the warning, use -WarningAction Stop: the call then throws and returns no output.
@@ -334,7 +334,9 @@ The key is always present and is always an array: empty when no resource is skip
 
 Each entry has seven string properties: id, name, type, location, subscriptionId, resourceGroup and reason.
 The reason is a code.
-NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no qualifying recommendation for the resource.
+NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no recommendation for the resource's type, automated or manual.
+A resource whose type has any recommendation is not listed, even when it gets no manual-validation row.
+A recommendation whose recommendationMetadataState is Disabled does not count.
 
 Entries are ordered by type and then by id, using the ordinal, case-insensitive comparison OrdinalIgnoreCase.
 With -Tags, the key lists only the skipped resources that remain in scope after the tag filter.

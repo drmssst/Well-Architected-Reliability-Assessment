@@ -179,7 +179,18 @@ Describe 'Start-WARACollector' {
             $serviceHealth = Get-Content -Raw -LiteralPath "$PSScriptRoot/../data/wara/test_servicehealthdata.json" | ConvertFrom-Json -Depth 20
             $resourceTypesCsv = Get-Content -Raw -LiteralPath "$PSScriptRoot/../data/wara/test_recommendationresourcetypesdata.csv"
 
-            # Flags vpnSites as covered, so its four resources end with no qualifying recommendation
+            # The three manual API Management recommendations are disabled, so the type keeps only its three automated ones
+            $deactivatedRecommendations = Get-Content -Raw -LiteralPath "$PSScriptRoot/../data/wara/test_recommendationobjectdata.json" | ConvertFrom-Json -Depth 20
+            $deactivated = 0
+            foreach ($recommendation in $deactivatedRecommendations) {
+                if ($recommendation.recommendationResourceType -eq 'Microsoft.ApiManagement/service' -and $recommendation.automationAvailable -eq $false) {
+                    $recommendation.recommendationMetadataState = 'Disabled'
+                    $deactivated++
+                }
+            }
+            $deactivated | Should -Be 3 -Because 'the fixture holds three manual API Management recommendations'
+
+            # Flags vpnSites as covered, so its four resources end with no recommendation for their type
             $driftCsv = $resourceTypesCsv.Replace('yes,Microsoft.Network/vpnSites,VPN Sites,No', 'yes,Microsoft.Network/vpnSites,VPN Sites,Yes')
             ($driftCsv -ne $resourceTypesCsv) | Should -BeTrue -Because 'the drift replacement must change the CSV text'
 
@@ -188,6 +199,9 @@ Describe 'Start-WARACollector' {
                 OriginalCsv                 = $resourceTypesCsv
                 DriftCsv                    = $driftCsv
                 ResourceTypesCsv            = $resourceTypesCsv
+                OriginalRecommendations     = $recommendations
+                DeactivatedRecommendations  = $deactivatedRecommendations
+                Recommendations             = $recommendations
                 DefaultTaggedResourceGroups = @('/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/rg-B1')
                 DefaultTaggedResources      = @('/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-A1/providers/Microsoft.ApiManagement/service/apiService1')
                 TaggedResourceGroups        = @()
@@ -204,7 +218,7 @@ Describe 'Start-WARACollector' {
             Mock Invoke-WAFQuery { return $allResources } -ModuleName 'wara'
             Mock Invoke-WAFQueryLoop { return $queryLoop } -ModuleName 'wara'
             Mock Get-WAFAdvisorMetadata { return $advisorMetadata } -ModuleName 'wara'
-            Mock Invoke-RestMethod { return $recommendations } -ParameterFilter { $uri -eq 'https://azure.github.io/WARA-Build/objects/recommendations.json' } -ModuleName 'wara'
+            Mock Invoke-RestMethod { return $state.Recommendations } -ParameterFilter { $uri -eq 'https://azure.github.io/WARA-Build/objects/recommendations.json' } -ModuleName 'wara'
             Mock Invoke-RestMethod { return $state.ResourceTypesCsv } -ParameterFilter { $uri -eq 'https://azure.github.io/WARA-Build/objects/WARAinScopeResTypes.csv' } -ModuleName 'wara'
             Mock Get-WARAOtherRecommendation { return $null } -ModuleName 'wara'
             Mock Get-WAFAdvisorRecommendation {
@@ -223,11 +237,12 @@ Describe 'Start-WARACollector' {
 
         BeforeEach {
             $state.ResourceTypesCsv = $state.OriginalCsv
+            $state.Recommendations = $state.OriginalRecommendations
             $state.TaggedResourceGroups = $state.DefaultTaggedResourceGroups
             $state.TaggedResources = $state.DefaultTaggedResources
         }
 
-        Context 'When the CSV flags a type as covered without a qualifying recommendation' {
+        Context 'When the CSV flags a type as covered that has no recommendation' {
             BeforeAll {
                 $state.ResourceTypesCsv = $state.DriftCsv
                 $parameters = $state.Parameters
@@ -370,6 +385,32 @@ Describe 'Start-WARACollector' {
                 @($collectedWarnings).Count | Should -Be 0
             }
         }
+
+        Context 'When a type has a recommendation but no manual one to validate' {
+            BeforeEach {
+                $state.Recommendations = $state.DeactivatedRecommendations
+            }
+
+            It 'Should not list the resources of a type that automated queries cover' {
+                $parameters = $state.Parameters
+
+                $result = Start-WARACollector @parameters -WarningVariable collectedWarnings -WarningAction SilentlyContinue
+
+                $result.skippedResources.GetType().IsArray | Should -BeTrue
+                $result.skippedResources.Count | Should -Be 0
+                @($collectedWarnings).Count | Should -Be 0
+
+                # The manual rows of the type are gone and its automated rows stay
+                $result.impactedResources.Count | Should -Be 39
+                $apiManagement = @($result.impactedResources.where({ $_.type -eq 'Microsoft.ApiManagement/service' }))
+                $apiManagement.Count | Should -Be 7
+                ($apiManagement.validationAction | Select-Object -Unique) | Should -Be 'APRL - Queries'
+                ($apiManagement.name | Sort-Object -Unique) -join ',' | Should -BeExactly 'apiService1,apiService2,apiService3,apiService4'
+
+                $impactedIds = @($result.impactedResources.id)
+                @($result.skippedResources | Where-Object { $_.id -in $impactedIds }).Count | Should -Be 0
+            }
+        }
     }
 }
 
@@ -474,7 +515,7 @@ Describe 'Build-ValidationResourceObj' {
         $subscription1 = '11111111-1111-1111-1111-111111111111'
         $subscription2 = '22222222-2222-2222-2222-222222222222'
 
-        # Outcome 1: automatedOnly. 2: manualActive. 3: notInAprl. 4: noRecommendation, typeIdOnly, disabledOnly.
+        # Outcome 1: automatedOnly. 2: manualActive. 3: notInAprl. 4: noRecommendation and disabledOnly are skipped; typeIdOnly has Active recommendations, so it is not.
         $recommendationObject = @(
             [PSCustomObject]@{ aprlGuid = 'g-1'; recommendationResourceType = 'Microsoft.Test/automatedOnly'; automationAvailable = $true; recommendationMetadataState = 'Active'; recommendationTypeId = ''; query = 'resources | project id' }
             [PSCustomObject]@{ aprlGuid = 'g-2'; recommendationResourceType = 'Microsoft.Test/manualActive'; automationAvailable = $false; recommendationMetadataState = 'Active'; recommendationTypeId = ''; query = '// cannot-be-validated-with-arg' }
@@ -529,16 +570,16 @@ Describe 'Build-ValidationResourceObj' {
     }
 
     Context 'Skipped resources' {
-        It 'Should record one skippedResourceObj per outcome-4 resource' {
+        It 'Should record one skippedResourceObj per resource whose type has no recommendation' {
             InModuleScope 'wara' -Parameters $script:validationFixture {
                 $skipped = [System.Collections.Generic.List[skippedResourceObj]]::new()
                 $null = Build-ValidationResourceObj -ValidationResources $ValidationResources -RecommendationObject $RecommendationObject -TypesNotInAPRLOrAdvisor $TypesNotInAPRLOrAdvisor -SkippedResources $skipped
 
-                $skipped.Count | Should -Be 4
-                'r1', 'r2', 't1', 'd1' | ForEach-Object {
+                $skipped.Count | Should -Be 3
+                'r1', 'r2', 'd1' | ForEach-Object {
                     $skipped.name | Should -Contain $_
                 }
-                'a1', 'm1', 'n1' | ForEach-Object {
+                'a1', 'm1', 'n1', 't1' | ForEach-Object {
                     $skipped.name | Should -Not -Contain $_
                 }
 
@@ -566,7 +607,7 @@ Describe 'Build-ValidationResourceObj' {
                 $skipped = [System.Collections.Generic.List[skippedResourceObj]]::new()
                 $skipped.Add($existing)
                 $null = Build-ValidationResourceObj -ValidationResources $ValidationResources -RecommendationObject $RecommendationObject -TypesNotInAPRLOrAdvisor $TypesNotInAPRLOrAdvisor -SkippedResources $skipped
-                $skipped.Count | Should -Be 5
+                $skipped.Count | Should -Be 4
                 $skipped[0].name | Should -Be 'existing'
 
                 $withoutOutcome4 = @{}
@@ -593,7 +634,7 @@ Describe 'Build-ValidationResourceObj' {
 
                 $warnings | Should -BeNullOrEmpty
                 $result.Count | Should -Be 2
-                $skipped.Count | Should -Be 4
+                $skipped.Count | Should -Be 3
             }
         }
     }

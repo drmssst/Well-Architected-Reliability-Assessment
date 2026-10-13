@@ -5,7 +5,7 @@
 .DESCRIPTION
     The Start-WARACollector function initiates the WARA Collector process, which collects and processes data based on the specified parameters. It supports multiple parameter sets, including Default, Specialized, and ConfigFileSet.
 
-    A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no qualifying recommendation, receives no APRL verdict. The collector lists each such resource in the 'skippedResources' output (see OUTPUTS) and writes one warning per run that gives the resource and type counts and names the largest types. No error is raised for these resources, so -ErrorAction Stop, or a global Stop preference, does not end the run. To end the run at the warning, use -WarningAction Stop: the call then throws and returns no output.
+    A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no recommendation for the type, automated or manual, receives no APRL verdict. The collector lists each such resource in the 'skippedResources' output (see OUTPUTS) and writes one warning per run that gives the resource and type counts and names the largest types. No error is raised for these resources, so -ErrorAction Stop, or a global Stop preference, does not end the run. To end the run at the warning, use -WarningAction Stop: the call then throws and returns no output.
 
 .PARAMETER SAP
     Switch to enable SAP workload processing.
@@ -75,7 +75,7 @@
 
     The key is always present and is always an array: empty when no resource is skipped, never $null and never omitted.
 
-    Each entry has seven string properties: id, name, type, location, subscriptionId, resourceGroup and reason. The reason is a code. NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no qualifying recommendation for the resource.
+    Each entry has seven string properties: id, name, type, location, subscriptionId, resourceGroup and reason. The reason is a code. NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no recommendation for the resource's type, automated or manual. A resource whose type has any recommendation is not listed, even when it gets no manual-validation row. A recommendation whose recommendationMetadataState is Disabled does not count.
 
     Entries are ordered by type and then by id, using the ordinal, case-insensitive comparison OrdinalIgnoreCase. With -Tags, the key lists only the skipped resources that remain in scope after the tag filter.
 
@@ -668,7 +668,7 @@ function Build-SkippedResourceObj {
             $typeText += ", and $($types.Count - $listed.Count) more types"
         }
 
-        Write-Warning ("{0} resource(s) of {1} type(s) received no APRL verdict: no qualifying recommendation was found, although WARAinScopeResTypes.csv flags the type as covered. The resource IDs are in 'skippedResources'. Types (resources): {2}." -f $sorted.Count, $types.Count, $typeText)
+        Write-Warning ("{0} resource(s) of {1} type(s) received no APRL verdict: recommendations.json has no automated or manual recommendation for the type, although WARAinScopeResTypes.csv flags the type as covered. The resource IDs are in 'skippedResources'. Types (resources): {2}." -f $sorted.Count, $types.Count, $typeText)
     }
 
     return , $sorted
@@ -919,7 +919,7 @@ class aprlResourceObj {
     Represents a resource that received no APRL verdict.
 
 .DESCRIPTION
-    The `skippedResourceObj` class records a resource that validation could not give an APRL verdict: `WARAinScopeResTypes.csv` flags its type as covered, but `recommendations.json` has no qualifying recommendation for it. Such a resource is neither compliant nor non-compliant, and it has no row in `impactedResources`.
+    The `skippedResourceObj` class records a resource that validation could not give an APRL verdict: `WARAinScopeResTypes.csv` flags its type as covered, but `recommendations.json` has no recommendation for its type, automated or manual. Such a resource is neither compliant nor non-compliant, and it has no row in `impactedResources`. A resource whose type has any recommendation is not listed, even when it gets no manual-validation row. A recommendation whose `recommendationMetadataState` is `Disabled` does not count.
 
 .PROPERTY id
     The ID of the resource.
@@ -1051,7 +1051,7 @@ class impactedResourceFactory {
     Resource types that we want to create a recommendation for but do not have a recommendation for.
 
 .PROPERTY SkippedResources
-    Receives a `skippedResourceObj` for each resource that ends with no qualifying recommendation. Defaults to a new empty list; a caller that assigns its own list gets the records in place.
+    Receives a `skippedResourceObj` for each resource whose type has no recommendation, automated or manual. Defaults to a new empty list; a caller that assigns its own list gets the records in place.
 
 .CONSTRUCTORS
     validationResourceFactory([PSObject]$recommendationObject, [hashtable]$validationResources, [PSObject]$TypesNotInAPRLOrAdvisor)
@@ -1059,7 +1059,7 @@ class impactedResourceFactory {
 
 .METHODS
     [object[]] createValidationResourceObjects()
-        Creates and returns an array of `aprlResourceObj` instances for validation purposes. A resource with no qualifying recommendation gets no `aprlResourceObj`; it is recorded in `SkippedResources` instead.
+        Creates and returns an array of `aprlResourceObj` instances for validation purposes. A resource whose type has no recommendation, automated or manual, gets no `aprlResourceObj`; it is recorded in `SkippedResources` instead. A resource whose type has a recommendation but none to validate manually gets neither.
 
     static [string] getValidationAction($query)
         Determines the validation action based on the query.
@@ -1079,7 +1079,7 @@ class validationResourceFactory {
     [PSObject] $recommendationObject # The recommendation object
     [hashtable] $validationResources # The validation resources
     [PSObject] $TypesNotInAPRLOrAdvisor # Resource types that we want to create a recommendation for but do not have a recommendation for.
-    [System.Collections.Generic.List[skippedResourceObj]] $SkippedResources = [System.Collections.Generic.List[skippedResourceObj]]::new() # Resources that end with no qualifying recommendation; a caller may assign its own list
+    [System.Collections.Generic.List[skippedResourceObj]] $SkippedResources = [System.Collections.Generic.List[skippedResourceObj]]::new() # Resources whose type has no recommendation, automated or manual; a caller may assign its own list
 
     validationResourceFactory([PSObject]$recommendationObject, [hashtable]$validationResources, [PSObject]$TypesNotInAPRLOrAdvisor) {
         $this.recommendationObject = $recommendationObject
@@ -1091,6 +1091,9 @@ class validationResourceFactory {
         $return = @()
 
         $RecommendationResourceTypesWithoutAutomation = ($this.recommendationObject | Group-Object recommendationResourceType | Where-Object {$_.group.automationavailable -notcontains $false}).Name
+
+        # A type with an Active recommendation is covered by an automated query or Advisor, so its resources are not skipped
+        $TypesWithActiveRecommendation = $this.recommendationObject.where({ $_.recommendationMetadataState -eq 'Active' }).recommendationResourceType
 
         $return = foreach ($v in $this.validationResources.GetEnumerator()) {
 
@@ -1142,7 +1145,7 @@ class validationResourceFactory {
                 $r.selector = $impactedResource.selector ?? "APRL"
                 $r
             }
-            else {
+            elseif ($impactedResource.type -notin $TypesWithActiveRecommendation) {
                 $skipped = [skippedResourceObj]::new()
                 $skipped.id = $impactedResource.id
                 $skipped.name = $impactedResource.name
