@@ -36,6 +36,11 @@ Start-WARACollector [-SAP] [-AVD] [-AVS] [-HPC] [-AI_GPT_RAG] [-PassThru] [-Subs
 The Start-WARACollector function initiates the WARA Collector process, which collects and processes data based on the specified parameters.
 It supports multiple parameter sets, including Default, Specialized, and ConfigFileSet.
 
+A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no qualifying recommendation, receives no APRL verdict.
+The collector lists each such resource in the 'skippedResources' output (see OUTPUTS) and writes one warning per run that gives the resource and type counts and names the largest types.
+No error is raised for these resources, so -ErrorAction Stop, or a global Stop preference, does not end the run.
+To end the run at the warning, use -WarningAction Stop: the call then throws and returns no output.
+
 ## EXAMPLES
 
 ### EXAMPLE 1
@@ -322,6 +327,21 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## INPUTS
 
 ## OUTPUTS
+
+The output object, which -PassThru returns and which is otherwise written to the JSON file, has a top-level 'skippedResources' key that lists the resources that received no APRL verdict.
+
+The key is always present and is always an array: empty when no resource is skipped, never $null and never omitted.
+
+Each entry has seven string properties: id, name, type, location, subscriptionId, resourceGroup and reason.
+The reason is a code.
+NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no qualifying recommendation for the resource.
+
+Entries are ordered by type and then by id, using the ordinal, case-insensitive comparison OrdinalIgnoreCase.
+With -Tags, the key lists only the skipped resources that remain in scope after the tag filter.
+
+A skipped resource has no row in 'impactedResources'.
+The key name, the property names, the reason code and the order are stable.
+Properties and codes can be added later, so a reader ignores the ones it does not know.
 
 ## NOTES
 

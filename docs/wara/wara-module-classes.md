@@ -42,6 +42,16 @@ classDiagram
         +string selector
     }
 
+    class skippedResourceObj {
+        +string id
+        +string name
+        +string type
+        +string location
+        +string subscriptionId
+        +string resourceGroup
+        +string reason
+    }
+
     class impactedResourceFactory {
         +PSObject impactedResources
         +hashtable allResources
@@ -54,6 +64,7 @@ classDiagram
         +PSObject recommendationObject
         +hashtable validationResources
         +PSObject TypesNotInAPRLOrAdvisor
+        +List~skippedResourceObj~ SkippedResources
         +validationResourceFactory(PSObject, hashtable, PSObject)
         +object[] createValidationResourceObjects()
         +static string getValidationAction(query)
@@ -70,6 +81,7 @@ classDiagram
     resourceTypeFactory ..> aprlResourceTypeObj : creates
     impactedResourceFactory ..> aprlResourceObj : creates
     validationResourceFactory ..> aprlResourceObj : creates
+    validationResourceFactory ..> skippedResourceObj : creates
     specializedResourceFactory ..> aprlResourceObj : creates
 ```
 
@@ -149,6 +161,26 @@ The `aprlResourceObj` class encapsulates the details of an APRL resource, includ
 - **checkName**: The check name for the resource.
 - **selector**: The selector for the resource.
 
+## skippedResourceObj
+
+### SYNOPSIS
+
+Represents a resource that received no APRL verdict.
+
+### DESCRIPTION
+
+The `skippedResourceObj` class records a resource that validation could not give an APRL verdict: `WARAinScopeResTypes.csv` flags its type as covered, but `recommendations.json` has no qualifying recommendation for it. Such a resource is neither compliant nor non-compliant, and it has no row in `impactedResources`.
+
+### PROPERTIES
+
+- **id**: The ID of the resource.
+- **name**: The name of the resource.
+- **type**: The type of the resource.
+- **location**: The location of the resource.
+- **subscriptionId**: The subscription ID of the resource.
+- **resourceGroup**: The resource group of the resource.
+- **reason**: The reason code. `NoMatchingRecommendation` is the only code today.
+
 ## impactedResourceFactory
 
 ### SYNOPSIS
@@ -194,6 +226,7 @@ The `validationResourceFactory` class is responsible for creating instances of `
 - **recommendationObject**: The recommendation object.
 - **validationResources**: The validation resources.
 - **TypesNotInAPRLOrAdvisor**: Resource types that we want to create a recommendation for but do not have a recommendation for.
+- **SkippedResources**: Receives a `skippedResourceObj` for each resource that ends with no qualifying recommendation. Defaults to a new empty list; a caller that assigns its own list gets the records in place.
 
 ### CONSTRUCTORS
 
@@ -207,7 +240,7 @@ validationResourceFactory([PSObject]$recommendationObject, [hashtable]$validatio
 [object[]] createValidationResourceObjects()
 ```
 
-Creates and returns an array of `aprlResourceObj` instances for validation purposes based on the recommendation objects, validation resources, and types not in APRL or ADVISOR.
+Creates and returns an array of `aprlResourceObj` instances for validation purposes based on the recommendation objects, validation resources, and types not in APRL or ADVISOR. A resource with no qualifying recommendation gets no `aprlResourceObj`; it is recorded in `SkippedResources` instead.
 
 ```powershell
 static [string] getValidationAction($query)

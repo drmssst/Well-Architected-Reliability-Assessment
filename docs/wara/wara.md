@@ -46,6 +46,7 @@ flowchart TB
 - [aprlResourceTypeObj](wara-module-classes.md#aprlresourcetypeobj) - Resource type object representing Azure resources
 - [resourceTypeFactory](wara-module-classes.md#resourcetypefactory) - Factory for creating resource type objects
 - [aprlResourceObj](wara-module-classes.md#aprlresourceobj) - Resource object representing individual Azure resources
+- [skippedResourceObj](wara-module-classes.md#skippedresourceobj) - Resource object representing a resource that received no APRL verdict
 - [impactedResourceFactory](wara-module-classes.md#impactedresourcefactory) - Factory for creating impacted resource objects
 - [validationResourceFactory](wara-module-classes.md#validationresourcefactory) - Factory for creating validation resource objects
 - [specializedResourceFactory](wara-module-classes.md#specializedresourcefactory) - Factory for creating specialized resource objects
