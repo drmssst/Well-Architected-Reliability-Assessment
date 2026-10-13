@@ -2,6 +2,7 @@
 # Start-WARACollector
 
 ## SYNOPSIS
+
 Starts the WARA Collector process.
 
 ## SYNTAX
@@ -31,8 +32,14 @@ Start-WARACollector [-SAP] [-AVD] [-AVS] [-HPC] [-AI_GPT_RAG] [-PassThru] [-Subs
 ```
 
 ## DESCRIPTION
+
 The Start-WARACollector function initiates the WARA Collector process, which collects and processes data based on the specified parameters.
 It supports multiple parameter sets, including Default, Specialized, and ConfigFileSet.
+
+A resource whose type WARAinScopeResTypes.csv flags as covered, but for which recommendations.json has no recommendation for the type, automated or manual, receives no APRL verdict.
+The collector lists each such resource in the 'skippedResources' output (see OUTPUTS) and writes one warning per run that gives the resource and type counts and names the largest types.
+No error is raised for these resources, so -ErrorAction Stop, or a global Stop preference, does not end the run.
+To end the run at the warning, use -WarningAction Stop: the call then throws and returns no output.
 
 ## EXAMPLES
 
@@ -63,6 +70,7 @@ Start-WARACollector -ConfigFile "C:\path\to\config.txt" -SAP -AVD
 ## PARAMETERS
 
 ### -SAP
+
 Switch to enable SAP workload processing.
 
 ```yaml
@@ -78,6 +86,7 @@ Accept wildcard characters: False
 ```
 
 ### -AVD
+
 Switch to enable AVD workload processing.
 
 ```yaml
@@ -93,6 +102,7 @@ Accept wildcard characters: False
 ```
 
 ### -AVS
+
 Switch to enable AVS workload processing.
 
 ```yaml
@@ -108,6 +118,7 @@ Accept wildcard characters: False
 ```
 
 ### -HPC
+
 Switch to enable HPC workload processing.
 
 ```yaml
@@ -123,6 +134,7 @@ Accept wildcard characters: False
 ```
 
 ### -AI_GPT_RAG
+
 Switch to enable Artificial Intelligence (GPT-RAG) workload processing.
 
 ```yaml
@@ -138,6 +150,7 @@ Accept wildcard characters: False
 ```
 
 ### -SubscriptionIds
+
 Array of subscription IDs to include in the process.
 Validated using Test-WAFSubscriptionId.
 
@@ -154,6 +167,7 @@ Accept wildcard characters: False
 ```
 
 ### -ResourceGroups
+
 Array of resource groups to include in the process.
 Validated using Test-WAFResourceGroupId.
 
@@ -170,6 +184,7 @@ Accept wildcard characters: False
 ```
 
 ### -TenantID
+
 The tenant ID to use for the process.
 This parameter is mandatory and validated using Test-WAFIsGuid.
 
@@ -186,6 +201,7 @@ Accept wildcard characters: False
 ```
 
 ### -Tags
+
 Array of tags to include in the process.
 Validated using Test-WAFTagPattern.
 
@@ -202,6 +218,7 @@ Accept wildcard characters: False
 ```
 
 ### -AzureEnvironment
+
 Specifies the Azure environment to use.
 Default is 'AzureCloud'.
 Valid values are 'AzureCloud', 'AzureUSGovernment', 'AzureGermanCloud', and 'AzureChinaCloud'.
@@ -219,9 +236,10 @@ Accept wildcard characters: False
 ```
 
 ### -ConfigFile
+
 Path to the configuration file.
 This parameter is mandatory for the ConfigFileSet parameter set and validated using Test-Path.
-See config file example [here](configfile.example).
+See the [config file example](configfile.example).
 
 ```yaml
 Type: String
@@ -236,8 +254,9 @@ Accept wildcard characters: False
 ```
 
 ### -RecommendationDataUri
+
 URI for the recommendation data.
-Default is 'https://azure.github.io/WARA-Build/objects/recommendations.json'.
+Default is '<https://azure.github.io/WARA-Build/objects/recommendations.json>'.
 
 ```yaml
 Type: String
@@ -252,8 +271,9 @@ Accept wildcard characters: False
 ```
 
 ### -RecommendationResourceTypesUri
+
 URI for the recommendation resource types.
-Default is 'https://raw.githubusercontent.com/Azure/Azure-Proactive-Resiliency-Library-v2/refs/heads/main/tools/WARAinScopeResTypes.csv'.
+Default is '<https://raw.githubusercontent.com/Azure/Azure-Proactive-Resiliency-Library-v2/refs/heads/main/tools/WARAinScopeResTypes.csv>'.
 
 ```yaml
 Type: String
@@ -268,6 +288,7 @@ Accept wildcard characters: False
 ```
 
 ### -UseImplicitRunbookSelectors
+
 Switch to enable the use of implicit runbook selectors.
 
 ```yaml
@@ -283,6 +304,7 @@ Accept wildcard characters: False
 ```
 
 ### -RunbookFile
+
 Path to the runbook file.
 Validated using Test-Path.
 
@@ -299,13 +321,32 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ## OUTPUTS
 
+The output object, which -PassThru returns and which is otherwise written to the JSON file, has a top-level 'skippedResources' key that lists the resources that received no APRL verdict.
+
+The key is always present and is always an array: empty when no resource is skipped, never $null and never omitted.
+
+Each entry has seven string properties: id, name, type, location, subscriptionId, resourceGroup and reason.
+The reason is a code.
+NoMatchingRecommendation is the only code so far: WARAinScopeResTypes.csv flags the type as covered, but recommendations.json has no recommendation for the resource's type, automated or manual.
+A resource whose type has any recommendation is not listed, even when it gets no manual-validation row.
+A recommendation whose recommendationMetadataState is Disabled does not count.
+
+Entries are ordered by type and then by id, using the ordinal, case-insensitive comparison OrdinalIgnoreCase.
+With -Tags, the key lists only the skipped resources that remain in scope after the tag filter.
+
+A skipped resource has no row in 'impactedResources'.
+The key name, the property names, the reason code and the order are stable.
+Properties and codes can be added later, so a reader ignores the ones it does not know.
+
 ## NOTES
+
 Author: Kyle Poineal
 Date: 12/11/2024
 

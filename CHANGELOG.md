@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Minor
+
+- Report resources that receive no APRL verdict: `Start-WARACollector` adds a
+  top-level `skippedResources` array to its output and writes one warning per run, in
+  place of an error raised inside a class method. Because no error is raised,
+  `-ErrorAction Stop` and a global `Stop` preference no longer end the run at the first
+  such resource; use `-WarningAction Stop` for fail-fast. (#3)
+
 ### Patch
 
 - Port Copilot issue-lifecycle tooling from `sfmc-tubfactory`: prompt files, PowerShell
