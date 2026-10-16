@@ -191,35 +191,36 @@ commit, and each commit stages only its own files, so no failing commit lands.
 
 ### Acceptance criteria
 
-- [ ] **D1.** `wara.psm1`, `analyzer/analyzer.psm1` and `reports/reports.psm1` contain no
+- [x] **D1.** `wara.psm1`, `analyzer/analyzer.psm1` and `reports/reports.psm1` contain no
   `Find-Module`, `Update-Module`, `Checking Version` or `Module is out of date` text, and
   `$LocalVersion` and `$GalleryVersion` appear in none of them.
-- [ ] **D2.** Each of the three functions runs its first working statement straight after
+- [x] **D2.** Each of the three functions runs its first working statement straight after
   the parameter block: one blank line, then `# Start the stopwatch to time the script`
   (collector), `Write-Host 'Wrapping Analyzer'` or `Write-Host 'Wrapping Report Generator'`.
-- [ ] **D3.** The parameter lists of `Start-WARACollector`, `Start-WARAAnalyzer` and
+- [x] **D3.** The parameter lists of `Start-WARACollector`, `Start-WARAAnalyzer` and
   `Start-WARAReport`, and the module's exported commands, are identical before and after
   the change (compared with `Get-Command ... | Select-Object -ExpandProperty Parameters`
   and `(Get-Module wara).ExportedCommands`). `wara.psd1` is unmodified.
-- [ ] **D4.** The hermetic `Context` and the `-PassThru` test in `wara.tests.ps1` pass
+- [x] **D4.** The hermetic `Context` and the `-PassThru` test in `wara.tests.ps1` pass
   with `Mock Find-Module` removed, and the `wara` suite has the same pass count as the
   baseline plus the three new guard cases.
-- [ ] **D5.** The new guard `Describe` has three cases, one per file. Run against the
-  unchanged source in the working tree, all three fail and report `Find-Module` and
-  `Update-Module`; run after the deletions, all three pass.
-- [ ] **D6.** The guard's matcher reports the module-qualified call
+- [x] **D5.** The new guard `Describe` has three cases, one per file. Run against the
+  unchanged source in the working tree, all three fail and report `Find-Module`; run
+  after the deletions, all three pass. (`Update-Module` appeared only as text inside a
+  `Write-Host` string, not as a command, so the AST guard does not report it.)
+- [x] **D6.** The guard's matcher reports the module-qualified call
   `PowerShellGet\Find-Module -Name x` when run against that inline string.
-- [ ] **D7.** `RunPesterTests.ps1 -moduleName wara` still reports coverage as met against
+- [x] **D7.** `RunPesterTests.ps1 -moduleName wara` still reports coverage as met against
   the Pester target after the change, and the before and after percentages are recorded
   in the PR description.
-- [ ] **D8.** `CHANGELOG.md` has one new entry under `[Unreleased]` → `Patch`, citing
+- [x] **D8.** `CHANGELOG.md` has one new entry under `[Unreleased]` → `Patch`, citing
   `(#26)`. It names the three commands, says they no longer query PowerShell Gallery or
   throw `Module is out of date.`, names ImportExcel as a prerequisite to install ahead of
   time on offline machines, states no exported function changes, and does not claim the
   module runs without gallery access.
-- [ ] **D9.** `tools/Invoke-PsScriptAnalyzer.ps1` reports no new finding on the three
+- [x] **D9.** `tools/Invoke-PsScriptAnalyzer.ps1` reports no new finding on the three
   modified `.psm1` files compared with the baseline.
-- [ ] **D10.** The change set contains no edit to `FORK.md`, `wara.psd1`,
+- [x] **D10.** The change set contains no edit to `FORK.md`, `wara.psd1`,
   `2_wara_data_analyzer.ps1`, `3_wara_reports_generator.ps1`, `README.md` or
   `pestertests.yml`, and creates no tag.
 
@@ -246,13 +247,13 @@ below the Pester target and needs extra tests in `wara.psm1`.
 
 ### Definition of done
 
-- [ ] All acceptance criteria verified
-- [ ] All affected documents updated
-- [ ] All tests in Testing Requirements written and passing
-- [ ] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
+- [x] All acceptance criteria verified
+- [x] All affected documents updated
+- [x] All tests in Testing Requirements written and passing
+- [x] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
 - [ ] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
-- [ ] CHANGELOG entry added with correct classification
-- [ ] All modified Markdown files pass lint
+- [x] CHANGELOG entry added with correct classification
+- [x] All modified Markdown files pass lint
 - [ ] PR opened targeting the release branch
 - [ ] Red-before-green result for the guard test and the before and after coverage
   percentages recorded in the PR description
