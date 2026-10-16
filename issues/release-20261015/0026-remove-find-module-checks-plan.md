@@ -251,9 +251,31 @@ below the Pester target and needs extra tests in `wara.psm1`.
 - [x] All affected documents updated
 - [x] All tests in Testing Requirements written and passing
 - [x] Full PowerShell suite (`tools/Invoke-Pester.ps1 src/tests/`) green
-- [ ] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
+- [x] Manual smoke test passed (verify behavior against testbed artifacts, where applicable)
+  — not applicable, per decision: the change removes a check and adds no behaviour
 - [x] CHANGELOG entry added with correct classification
 - [x] All modified Markdown files pass lint
 - [ ] PR opened targeting the release branch
 - [ ] Red-before-green result for the guard test and the before and after coverage
   percentages recorded in the PR description
+
+## Reflection
+
+**Estimate:** `S`
+
+**Actual:** About right, slightly easier than estimated; the deletions and CHANGELOG were mechanical and no extra tests were needed.
+
+**Drivers that materialised:**
+
+- Pester 5 scoping for the guard: no friction. Paths built in the `-ForEach` data at discovery and the parse in the `It` body worked first time, and the red run failed 3/3 for the right reason.
+- Baseline and coverage: the baseline was green (38/38) and coverage rose from 83.46% to 84.87% against the 75% target, so no extra tests were needed.
+- Whether six command names were enough: they were, and the module-qualified form is caught.
+
+**Surprises (not in sizing estimate):**
+
+- D5 expected the red run to report `Update-Module`, but it appeared only as text in a `Write-Host` string, so the AST guard reports `Find-Module` alone; the plan wording was corrected.
+- The guard and the mock removal share one test file, so the fix and test commits needed a partial stage of that file.
+- The first parameter and export comparison for D3 gave a false mismatch from module caching under a repeated module name; removing the module between loads fixed it.
+- The branch prefix `implement/` is not in the skill's allowed list, and the commit guidelines required bullet bodies, so the approved commit messages were reworked.
+
+**Revised size verdict:** Same size, `S`, since the effort split between the guard and the verification runs as predicted.
