@@ -213,7 +213,6 @@ Describe 'Start-WARACollector' {
                 }
             }
 
-            Mock Find-Module { [PSCustomObject]@{ Version = [version]'1.0.0' } } -ModuleName 'wara'
             Mock Connect-WAFAzure { } -ModuleName 'wara'
             Mock Invoke-WAFQuery { return $allResources } -ModuleName 'wara'
             Mock Invoke-WAFQueryLoop { return $queryLoop } -ModuleName 'wara'
