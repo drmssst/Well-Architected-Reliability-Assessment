@@ -23,3 +23,11 @@ All notable changes to this project will be documented in this file.
   that flag eligible issues, a compact plan in `plan-issue`, a guard and escape in
   `implement-issue`, and the `lifecycle:fast-track` labels. No changes to any function
   exported by the WARA PowerShell module. (#4)
+- Remove the PowerShell Gallery version check from `Start-WARACollector`,
+  `Start-WARAAnalyzer` and `Start-WARAReport`. The three commands no longer query
+  PowerShell Gallery for a newer module version and no longer throw
+  `Module is out of date.` when one exists or the gallery is unreachable, and the
+  `Checking Version..` line is no longer printed. On machines without internet access,
+  install ImportExcel ahead of time, because the analyzer and report scripts still try to
+  install it from PowerShell Gallery when it is missing. No changes to any function
+  exported by the WARA PowerShell module. (#26)

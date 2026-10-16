@@ -213,7 +213,6 @@ Describe 'Start-WARACollector' {
                 }
             }
 
-            Mock Find-Module { [PSCustomObject]@{ Version = [version]'1.0.0' } } -ModuleName 'wara'
             Mock Connect-WAFAzure { } -ModuleName 'wara'
             Mock Invoke-WAFQuery { return $allResources } -ModuleName 'wara'
             Mock Invoke-WAFQueryLoop { return $queryLoop } -ModuleName 'wara'
@@ -790,4 +789,23 @@ Describe 'Get-WARAOtherRecommendation' {
         }
     }
 
+}
+
+Describe 'Entry-point modules (wara, analyzer, reports) do not query PowerShell Gallery' {
+    It 'Contains no <Name> gallery command call' -ForEach @(
+        @{ Name = 'wara.psm1'; Path = "$PSScriptRoot/../../modules/wara/wara.psm1" }
+        @{ Name = 'analyzer.psm1'; Path = "$PSScriptRoot/../../modules/wara/analyzer/analyzer.psm1" }
+        @{ Name = 'reports.psm1'; Path = "$PSScriptRoot/../../modules/wara/reports/reports.psm1" }
+    ) {
+        $galleryCommands = 'Find-Module', 'Update-Module', 'Install-Module', 'Find-PSResource', 'Update-PSResource', 'Install-PSResource'
+        $tokens = $null
+        $parseErrors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path -LiteralPath $Path).Path, [ref]$tokens, [ref]$parseErrors)
+        $parseErrors | Should -BeNullOrEmpty
+
+        $calls = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] }, $true) |
+            ForEach-Object { $_.GetCommandName() } |
+            Where-Object { $_ -and (($_ -split '\\')[-1] -in $galleryCommands) }
+        $calls | Should -BeNullOrEmpty
+    }
 }
