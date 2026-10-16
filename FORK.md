@@ -15,8 +15,17 @@ Fork versions are `<upstream version>-eoa.<N>`, for example `1.0.6-eoa.1`.
 | --- | --- | --- |
 | `v1.0.6-eoa.0` | `8683227` | Baseline. Identical to upstream `main` at that commit, which is the `v1.0.6` tag plus 8 upstream commits (formatting, exception handling, Office process handling and a `New-PPTFile` parameter fix in the analyzer and reports generator). |
 | `v1.0.6-eoa.1` | `acc78b5` | First fork release. Adds `skippedResources` (below). |
+| `v1.0.6-eoa.2` | `82118f5` | Removes the PowerShell Gallery version check from the three entry points (below). |
 
 ## Fork-only changes to the module
+
+### v1.0.6-eoa.2
+
+- `Start-WARACollector`, `Start-WARAAnalyzer` and `Start-WARAReport` no longer call `Find-Module` to compare the loaded version with PowerShell Gallery. They no longer throw `Module is out of date.` when upstream publishes a higher version or the gallery is unreachable, and the `Checking Version..` line is no longer printed.
+- No exported function or parameter changes.
+- The analyzer and report scripts still run `Install-Module ImportExcel` when ImportExcel is missing, so a machine without internet access needs ImportExcel installed ahead of time.
+- A test in `src/tests/wara/wara.tests.ps1` fails if any of the three modules calls `Find-Module`, `Update-Module`, `Install-Module` or the `*-PSResource` equivalents.
+- Source: `src/modules/wara/wara.psm1`, `src/modules/wara/analyzer/analyzer.psm1`, `src/modules/wara/reports/reports.psm1` (fork PR #27).
 
 ### v1.0.6-eoa.1
 
